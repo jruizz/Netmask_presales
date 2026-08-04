@@ -1,0 +1,64 @@
+services:
+
+  proxy:
+    image: nginx:alpine
+    container_name: netmask_presales_proxy
+    restart: unless-stopped
+    ports:
+      - "${PUBLISHED_PORT:-8080}:80"
+    volumes:
+      - ./proxy/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - netmask_net
+
+  frontend:
+    build: ./frontend
+    container_name: netmask_presales_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - netmask_net
+
+  backend:
+    build: ./backend
+    container_name: netmask_presales_backend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-8h}
+      - CORS_ORIGIN=${CORS_ORIGIN:-*}
+      - SUPERADMIN_EMAIL=${SUPERADMIN_EMAIL}
+      - SUPERADMIN_PASSWORD=${SUPERADMIN_PASSWORD}
+      - SUPERADMIN_NOMBRE=${SUPERADMIN_NOMBRE:-Administrador}
+    depends_on:
+      - db
+    networks:
+      - netmask_net
+
+  db:
+    image: postgres:16-alpine
+    container_name: netmask_presales_db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - netmask_net
+
+networks:
+  netmask_net:
+    driver: bridge
+
+volumes:
+  pgdata:

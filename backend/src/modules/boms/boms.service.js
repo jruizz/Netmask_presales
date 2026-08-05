@@ -6,11 +6,13 @@ const ROLES_VISIBILIDAD_AMPLIADA = ['superadmin', 'gerencia'];
 export async function listBoms(user, { mine }) {
   const verTodos = ROLES_VISIBILIDAD_AMPLIADA.includes(user.rolClave) && !mine;
   const baseSelect = `
-    SELECT b.id, b.nombre, b.estado, b.creado_en,
-           c.id AS cliente_id, c.razon_social AS cliente_nombre,
+    SELECT b.id, b.nombre, b.estado, b.ubicacion_proyecto, b.creado_en,
+           c.id AS cliente_id, c.nombre_cliente AS cliente_nombre,
+           co.id AS comercial_id, co.nombre AS comercial_nombre,
            u.nombre AS creador_nombre
     FROM boms b
     JOIN clientes c ON c.id = b.cliente_id
+    LEFT JOIN comerciales co ON co.id = b.comercial_id
     JOIN usuarios u ON u.id = b.creado_por
   `;
   if (verTodos) {
@@ -24,21 +26,25 @@ export async function listBoms(user, { mine }) {
   return rows;
 }
 
-export async function crearBom({ clienteId, nombre }, creadoPorId) {
+export async function crearBom({ clienteId, nombre, comercialId, ubicacionProyecto }, creadoPorId) {
   const { rows: clienteRows } = await query('SELECT id FROM clientes WHERE id = $1 AND activo = true', [clienteId]);
   if (clienteRows.length === 0) throw new HttpError(400, 'Cliente invalido');
+  const { rows: comercialRows } = await query('SELECT id FROM comerciales WHERE id = $1 AND activo = true', [comercialId]);
+  if (comercialRows.length === 0) throw new HttpError(400, 'Comercial invalido');
   const { rows } = await query(
-    `INSERT INTO boms (cliente_id, nombre, creado_por) VALUES ($1, $2, $3) RETURNING *`,
-    [clienteId, nombre, creadoPorId]
+    `INSERT INTO boms (cliente_id, nombre, comercial_id, ubicacion_proyecto, creado_por)
+     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+    [clienteId, nombre, comercialId, ubicacionProyecto, creadoPorId]
   );
   return rows[0];
 }
 
 export async function getBom(id, user) {
   const { rows } = await query(
-    `SELECT b.*, c.razon_social AS cliente_nombre, u.nombre AS creador_nombre
+    `SELECT b.*, c.nombre_cliente AS cliente_nombre, co.nombre AS comercial_nombre, u.nombre AS creador_nombre
      FROM boms b
      JOIN clientes c ON c.id = b.cliente_id
+     LEFT JOIN comerciales co ON co.id = b.comercial_id
      JOIN usuarios u ON u.id = b.creado_por
      WHERE b.id = $1`,
     [id]

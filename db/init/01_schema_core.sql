@@ -74,14 +74,13 @@ CREATE INDEX idx_auditoria_entidad ON auditoria_log(entidad_tipo, entidad_id);
 CREATE INDEX idx_usuarios_rol ON usuarios(rol_id);
 CREATE INDEX idx_clientes_creado_por ON clientes(creado_por);
 
--- Roles base (Fase 1)
+-- Roles base: jerarquia Super Administrador > Gerencia > Lider Tecnico > Preventa > Comercial
 INSERT INTO roles (clave, nombre_visible, descripcion) VALUES
   ('superadmin',    'Super Administrador', 'Acceso total a la plataforma'),
   ('gerencia',      'Gerencia',            'Visibilidad de todos los proyectos y aprobacion final'),
   ('lider_tecnico', 'Lider Tecnico',       'Aprobacion tecnica y administracion de catalogos'),
-  ('ingenieria',    'Ingenieria',          'Construccion de BOMs, cotizaciones y especificaciones'),
-  ('comercial',     'Comercial',           'Creacion de BOMs y gestion de clientes'),
-  ('solo_lectura',  'Solo Lectura',        'Consulta unicamente, sin permisos de escritura');
+  ('preventa',      'Preventa',            'Construccion de BOMs, cotizaciones y especificaciones; requiere aprobacion del Lider Tecnico'),
+  ('comercial',      'Comercial',           'Visibilidad de sus proyectos y descarga de documentos');
 
 -- Permisos base (Fase 1) -- se amplia en fases posteriores segun se agreguen modulos
 INSERT INTO permisos (clave, descripcion) VALUES
@@ -109,12 +108,8 @@ WHERE r.clave = 'lider_tecnico' AND p.clave IN ('ver','crear','editar','aprobar_
 
 INSERT INTO roles_permisos (rol_id, permiso_id)
 SELECT r.id, p.id FROM roles r, permisos p
-WHERE r.clave = 'ingenieria' AND p.clave IN ('ver','crear','editar','descargar');
+WHERE r.clave = 'preventa' AND p.clave IN ('ver','crear','editar','descargar');
 
 INSERT INTO roles_permisos (rol_id, permiso_id)
 SELECT r.id, p.id FROM roles r, permisos p
-WHERE r.clave = 'comercial' AND p.clave IN ('ver','crear','descargar');
-
-INSERT INTO roles_permisos (rol_id, permiso_id)
-SELECT r.id, p.id FROM roles r, permisos p
-WHERE r.clave = 'solo_lectura' AND p.clave IN ('ver');
+WHERE r.clave = 'comercial' AND p.clave IN ('ver','descargar');

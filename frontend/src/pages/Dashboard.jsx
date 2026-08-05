@@ -61,6 +61,7 @@ export default function Dashboard() {
                 <tr>
                   <th>Nombre</th>
                   <th>Cliente</th>
+                  <th>Comercial</th>
                   <th>Estado</th>
                   <th>Creado por</th>
                   <th>Fecha</th>
@@ -71,6 +72,7 @@ export default function Dashboard() {
                   <tr key={b.id}>
                     <td><Link to={`/boms/${b.id}`} style={{ fontWeight: 600 }}>{b.nombre}</Link></td>
                     <td>{b.cliente_nombre}</td>
+                    <td className="muted">{b.comercial_nombre || '—'}</td>
                     <td><Badge variant={ESTADO_BADGE[b.estado] || 'neutral'}>{b.estado}</Badge></td>
                     <td className="muted">{b.creador_nombre}</td>
                     <td className="muted">{new Date(b.creado_en).toLocaleDateString('es-CO')}</td>

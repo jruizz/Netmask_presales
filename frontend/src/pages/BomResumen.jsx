@@ -94,7 +94,12 @@ export default function BomResumen() {
       <PageHeader
         back="/"
         title={bom.nombre}
-        subtitle={<>Cliente: <strong>{bom.cliente_nombre}</strong> &nbsp;·&nbsp; Creado por {bom.creador_nombre}</>}
+        subtitle={<>
+          Cliente: <strong>{bom.cliente_nombre}</strong> &nbsp;·&nbsp;
+          Comercial: <strong>{bom.comercial_nombre || '—'}</strong> &nbsp;·&nbsp;
+          Ubicación: <strong>{bom.ubicacion_proyecto || '—'}</strong> &nbsp;·&nbsp;
+          Creado por {bom.creador_nombre}
+        </>}
         actions={<Badge variant="info">{bom.estado}</Badge>}
       />
 

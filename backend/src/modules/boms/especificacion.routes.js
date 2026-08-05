@@ -50,7 +50,7 @@ especificacionRouter.delete('/', requirePermiso('crear'), async (req, res, next)
   }
 });
 
-especificacionRouter.post('/enviar-revision-lider', requireRole('ingenieria', 'superadmin'), async (req, res, next) => {
+especificacionRouter.post('/enviar-revision-lider', requireRole('preventa', 'superadmin'), async (req, res, next) => {
   try {
     await assertBomAccess(req);
     res.json(await especificacionesService.enviarRevisionLider(req.params.bomId, req.user.id));

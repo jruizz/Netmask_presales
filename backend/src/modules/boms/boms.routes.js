@@ -10,6 +10,8 @@ bomsRouter.use(authMiddleware);
 const crearBomSchema = z.object({
   clienteId: z.number().int().positive(),
   nombre: z.string().min(1),
+  comercialId: z.number().int().positive(),
+  ubicacionProyecto: z.string().min(1),
 });
 
 bomsRouter.get('/', requirePermiso('ver'), async (req, res, next) => {

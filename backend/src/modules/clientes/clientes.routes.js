@@ -8,7 +8,7 @@ export const clientesRouter = Router();
 clientesRouter.use(authMiddleware);
 
 const clienteSchema = z.object({
-  razonSocial: z.string().min(1),
+  nombreCliente: z.string().min(1),
   nit: z.string().optional(),
   sector: z.string().optional(),
   contactoNombre: z.string().optional(),
@@ -42,7 +42,7 @@ clientesRouter.post('/', requirePermiso('crear'), async (req, res, next) => {
   }
 });
 
-clientesRouter.put('/:id', requireRole('ingenieria', 'superadmin'), async (req, res, next) => {
+clientesRouter.put('/:id', requireRole('preventa', 'superadmin'), async (req, res, next) => {
   try {
     const data = clienteSchema.parse(req.body);
     res.json(await clientesService.actualizarCliente(req.params.id, data));

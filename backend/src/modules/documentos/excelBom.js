@@ -13,7 +13,7 @@ export async function generarExcelBom({ bom, cliente, hardwareItems, cotizacion,
   estiloEncabezado(resumen.getCell('A1'));
   resumen.getRow(1).height = 22;
   resumen.getCell('A2').value = 'Cliente';
-  resumen.getCell('B2').value = cliente.razon_social;
+  resumen.getCell('B2').value = cliente.nombre_cliente;
   resumen.getCell('A3').value = 'Fecha';
   resumen.getCell('B3').value = new Date().toLocaleDateString('es-CO');
 

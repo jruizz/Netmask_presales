@@ -180,10 +180,10 @@ export default function BomServicios() {
               <strong>Estado:</strong> <Badge variant={ESTADOS_BADGE[spec.estado] || 'neutral'}>{ESTADOS_LABEL[spec.estado] || spec.estado}</Badge>
             </div>
             <div className="row" style={{ flexWrap: 'wrap' }}>
-              {spec.estado === 'borrador' && (rol === 'ingenieria' || rol === 'superadmin') && (
+              {spec.estado === 'borrador' && (rol === 'preventa' || rol === 'superadmin') && (
                 <Button size="sm" onClick={() => ejecutarAccion('enviar-revision-lider')}>Enviar a revisión (Líder Técnico)</Button>
               )}
-              {spec.estado === 'rechazado' && (rol === 'ingenieria' || rol === 'superadmin') && (
+              {spec.estado === 'rechazado' && (rol === 'preventa' || rol === 'superadmin') && (
                 <Button size="sm" onClick={() => ejecutarAccion('enviar-revision-lider')}>Reenviar a revisión</Button>
               )}
               {spec.estado === 'revision_lider' && (rol === 'lider_tecnico' || rol === 'superadmin') && (

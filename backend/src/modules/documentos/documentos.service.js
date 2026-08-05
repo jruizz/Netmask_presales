@@ -96,7 +96,7 @@ export async function listarDocumentosGlobal(user, { tipo } = {}) {
 
   const { rows } = await query(
     `SELECT d.id, d.tipo, d.nombre_archivo, d.tamano_bytes, d.generado_en,
-            b.id AS bom_id, b.nombre AS bom_nombre, c.razon_social AS cliente_nombre, u.nombre AS generado_por_nombre
+            b.id AS bom_id, b.nombre AS bom_nombre, c.nombre_cliente AS cliente_nombre, u.nombre AS generado_por_nombre
      FROM documentos_generados d
      JOIN boms b ON b.id = d.bom_id
      JOIN clientes c ON c.id = b.cliente_id

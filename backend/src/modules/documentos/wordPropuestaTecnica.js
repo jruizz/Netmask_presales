@@ -48,14 +48,14 @@ export async function generarWordPropuestaTecnica({ bom, cliente, hardwareItems,
     }),
     new Paragraph({
       shading: { type: ShadingType.SOLID, fill: NM.dark }, alignment: AlignmentType.CENTER, spacing: { after: 800 },
-      children: [new TextRun({ text: cliente.razon_social, color: NM.white, font: FONT, size: 26 })],
+      children: [new TextRun({ text: cliente.nombre_cliente, color: NM.white, font: FONT, size: 26 })],
     }),
     new Paragraph({ pageBreakBefore: true, children: [] }),
   ];
 
   const introduccion = [
     titulo('Introducción'),
-    parrafo(`Esta propuesta técnica resume el alcance del proyecto "${bom.nombre}" para ${cliente.razon_social}. Describe qué se implementa y/o qué servicio gestionado de Netmask aplica, junto con lo que incluye y lo que no. Este documento no contiene información de precios ni de horas de esfuerzo; el valor comercial se gestiona por separado.`),
+    parrafo(`Esta propuesta técnica resume el alcance del proyecto "${bom.nombre}" para ${cliente.nombre_cliente}. Describe qué se implementa y/o qué servicio gestionado de Netmask aplica, junto con lo que incluye y lo que no. Este documento no contiene información de precios ni de horas de esfuerzo; el valor comercial se gestiona por separado.`),
   ];
 
   const seccionesComponentes = [];

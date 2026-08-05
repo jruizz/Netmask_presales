@@ -1,9 +1,10 @@
 import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext.jsx';
 import logo from '../assets/logo.png';
-import { IconDashboard, IconLibrary, IconAudit, IconUsers, IconLogout } from './icons.jsx';
+import { IconDashboard, IconLibrary, IconAudit, IconUsers, IconLogout, IconBriefcase } from './icons.jsx';
 
 const ROLES_VISIBILIDAD_AMPLIADA = ['superadmin', 'gerencia'];
+const ROLES_ADMINISTRAN_CATALOGOS = ['lider_tecnico', 'superadmin'];
 
 function NavLink({ to, icon: Icon, children, exact }) {
   const location = useLocation();
@@ -23,6 +24,7 @@ export default function AppShell() {
   if (!token) return <Navigate to="/login" replace />;
 
   const puedeVerTodos = me && ROLES_VISIBILIDAD_AMPLIADA.includes(me.rol);
+  const administraCatalogos = me && ROLES_ADMINISTRAN_CATALOGOS.includes(me.rol);
 
   return (
     <div className="app-shell">
@@ -35,6 +37,7 @@ export default function AppShell() {
           <NavLink to="/" icon={IconDashboard} exact>Dashboard</NavLink>
           <NavLink to="/documentos" icon={IconLibrary}>Biblioteca</NavLink>
           {puedeVerTodos && <NavLink to="/auditoria" icon={IconAudit}>Auditoría</NavLink>}
+          {administraCatalogos && <NavLink to="/comerciales" icon={IconBriefcase}>Comerciales</NavLink>}
           {me?.rol === 'superadmin' && <NavLink to="/usuarios" icon={IconUsers}>Usuarios y Roles</NavLink>}
         </nav>
 

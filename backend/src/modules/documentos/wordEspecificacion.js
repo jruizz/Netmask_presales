@@ -64,7 +64,7 @@ export async function generarWordEspecificacion({ bom, cliente, especificacion, 
       shading: { type: ShadingType.SOLID, fill: NM.dark },
       alignment: AlignmentType.CENTER,
       spacing: { after: 800 },
-      children: [new TextRun({ text: cliente.razon_social, color: NM.white, font: FONT, size: 26 })],
+      children: [new TextRun({ text: cliente.nombre_cliente, color: NM.white, font: FONT, size: 26 })],
     }),
     new Paragraph({ pageBreakBefore: true, children: [] }),
   ];
@@ -72,7 +72,7 @@ export async function generarWordEspecificacion({ bom, cliente, especificacion, 
   const control = [
     titulo('Control Documental', 1),
     new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [
-      filaInfo('Cliente', cliente.razon_social),
+      filaInfo('Cliente', cliente.nombre_cliente),
       filaInfo('Servicio', tipoServicio.nombre),
       filaInfo('Versión', especificacion.version),
       filaInfo('Estado', ESTADOS_LABEL[especificacion.estado] || especificacion.estado),
@@ -82,7 +82,7 @@ export async function generarWordEspecificacion({ bom, cliente, especificacion, 
 
   const resumenEjecutivo = [
     titulo('Resumen Ejecutivo', 2),
-    parrafo(`Este documento describe la especificación del servicio "${tipoServicio.nombre}" para ${cliente.razon_social}, incluyendo alcance, cobertura, niveles de servicio (SLA), matriz de escalamiento y responsabilidades de ambas partes.`),
+    parrafo(`Este documento describe la especificación del servicio "${tipoServicio.nombre}" para ${cliente.nombre_cliente}, incluyendo alcance, cobertura, niveles de servicio (SLA), matriz de escalamiento y responsabilidades de ambas partes.`),
     parrafo(tipoServicio.descripcion),
   ];
 
@@ -185,7 +185,7 @@ export async function generarWordEspecificacion({ bom, cliente, especificacion, 
   const firma = [
     titulo('Firma y Aprobación', 16),
     new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [
-      new TableRow({ children: [celda('Por Netmask SAS', { bg: NM.dark, color: NM.white, bold: true, width: 50 }), celda(`Por ${cliente.razon_social}`, { bg: NM.dark, color: NM.white, bold: true, width: 50 })] }),
+      new TableRow({ children: [celda('Por Netmask SAS', { bg: NM.dark, color: NM.white, bold: true, width: 50 }), celda(`Por ${cliente.nombre_cliente}`, { bg: NM.dark, color: NM.white, bold: true, width: 50 })] }),
       new TableRow({ children: [celda('Nombre: _______________________', { width: 50 }), celda('Nombre: _______________________', { width: 50 })] }),
       new TableRow({ children: [celda('Cargo: _______________________', { width: 50 }), celda('Cargo: _______________________', { width: 50 })] }),
       new TableRow({ children: [celda('Firma: _______________________', { width: 50 }), celda('Firma: _______________________', { width: 50 })] }),
@@ -197,7 +197,7 @@ export async function generarWordEspecificacion({ bom, cliente, especificacion, 
     sections: [{
       properties: {},
       headers: {
-        default: new Header({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: `${cliente.razon_social} — ${tipoServicio.nombre}`, size: 16, color: '888888', font: FONT })] })] }),
+        default: new Header({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: `${cliente.nombre_cliente} — ${tipoServicio.nombre}`, size: 16, color: '888888', font: FONT })] })] }),
       },
       footers: {
         default: new Footer({ children: [new Paragraph({

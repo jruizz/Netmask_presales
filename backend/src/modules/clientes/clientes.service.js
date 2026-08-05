@@ -3,7 +3,7 @@ import { HttpError } from '../../middlewares/errorHandler.js';
 
 export async function listClientes() {
   const { rows } = await query(
-    'SELECT * FROM clientes WHERE activo = true ORDER BY razon_social ASC'
+    'SELECT * FROM clientes WHERE activo = true ORDER BY nombre_cliente ASC'
   );
   return rows;
 }
@@ -15,23 +15,23 @@ export async function getCliente(id) {
 }
 
 export async function crearCliente(data, creadoPorId) {
-  const { razonSocial, nit, sector, contactoNombre, contactoCorreo, contactoTelefono, ciudad } = data;
+  const { nombreCliente, nit, sector, contactoNombre, contactoCorreo, contactoTelefono, ciudad } = data;
   const { rows } = await query(
-    `INSERT INTO clientes (razon_social, nit, sector, contacto_nombre, contacto_correo, contacto_telefono, ciudad, creado_por)
+    `INSERT INTO clientes (nombre_cliente, nit, sector, contacto_nombre, contacto_correo, contacto_telefono, ciudad, creado_por)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      RETURNING *`,
-    [razonSocial, nit, sector, contactoNombre, contactoCorreo, contactoTelefono, ciudad, creadoPorId]
+    [nombreCliente, nit, sector, contactoNombre, contactoCorreo, contactoTelefono, ciudad, creadoPorId]
   );
   return rows[0];
 }
 
 export async function actualizarCliente(id, data) {
-  const { razonSocial, nit, sector, contactoNombre, contactoCorreo, contactoTelefono, ciudad } = data;
+  const { nombreCliente, nit, sector, contactoNombre, contactoCorreo, contactoTelefono, ciudad } = data;
   const { rows } = await query(
-    `UPDATE clientes SET razon_social = $1, nit = $2, sector = $3, contacto_nombre = $4,
+    `UPDATE clientes SET nombre_cliente = $1, nit = $2, sector = $3, contacto_nombre = $4,
        contacto_correo = $5, contacto_telefono = $6, ciudad = $7
      WHERE id = $8 RETURNING *`,
-    [razonSocial, nit, sector, contactoNombre, contactoCorreo, contactoTelefono, ciudad, id]
+    [nombreCliente, nit, sector, contactoNombre, contactoCorreo, contactoTelefono, ciudad, id]
   );
   if (rows.length === 0) throw new HttpError(404, 'Cliente no encontrado');
   return rows[0];

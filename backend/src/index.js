@@ -20,6 +20,7 @@ import { bomDocumentosRouter } from './modules/boms/documentos.routes.js';
 import { documentosRouter } from './modules/documentos/documentos.routes.js';
 import { auditoriaRouter } from './modules/auditoria/auditoria.routes.js';
 import { rolesRouter } from './modules/roles/roles.routes.js';
+import { comercialesRouter } from './modules/comerciales/comerciales.routes.js';
 
 const app = express();
 app.use(cors({ origin: env.corsOrigin }));
@@ -30,6 +31,7 @@ app.get('/api/health', (req, res) => res.json({ ok: true }));
 app.use('/api/auth', authRouter);
 app.use('/api/usuarios', usuariosRouter);
 app.use('/api/clientes', clientesRouter);
+app.use('/api/comerciales', comercialesRouter);
 app.use('/api/boms/:bomId/hardware-items', hardwareItemsRouter);
 app.use('/api/boms/:bomId/cotizacion-implementacion', cotizacionImplRouter);
 app.use('/api/boms/:bomId/sugerencias-implementacion', sugerenciasRouter);

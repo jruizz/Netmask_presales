@@ -97,7 +97,7 @@ export async function generarExcelCotizacion({ bom, cliente, cotizacion }) {
   ws.getRow(1).height = 22;
 
   ws.getCell('A2').value = 'Cliente';
-  ws.getCell('B2').value = cliente.razon_social;
+  ws.getCell('B2').value = cliente.nombre_cliente;
   ws.getCell('A3').value = 'Modo';
   ws.getCell('B3').value = cotizacion.modo === 'epsp' ? 'Servicio EPSP (TD Synnex/Fortinet)' : 'Servicio Netmask';
   ws.getCell('A4').value = 'Nivel de ingeniería';

@@ -49,7 +49,13 @@ export default function Login() {
         </div>
         <div className="field">
           <label>Contraseña</label>
-          <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <input
+            className="input"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
         </div>
 
         {error && <div className="alert alert-danger">{error}</div>}

@@ -105,7 +105,7 @@ export default function BomResumen() {
 
       {error && <div className="alert alert-danger">{error}</div>}
 
-      <div className="grid grid-3" style={{ marginBottom: 24 }}>
+      <div className="stack" style={{ marginBottom: 24 }}>
         <ComponentCard
           icon={IconBox} title="Hardware" to={`/boms/${id}/hardware`}
           description="Cantidad, precio y SKU de los equipos del proyecto."

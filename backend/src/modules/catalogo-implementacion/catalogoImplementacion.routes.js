@@ -37,6 +37,24 @@ catalogoImplementacionRouter.post('/tecnologias', requirePermiso('administrar_ca
   }
 });
 
+catalogoImplementacionRouter.put('/tecnologias/:id', requirePermiso('administrar_catalogos'), async (req, res, next) => {
+  try {
+    const data = tecnologiaSchema.parse(req.body);
+    res.json(await catalogoService.actualizarTecnologia(req.params.id, data));
+  } catch (err) {
+    next(err);
+  }
+});
+
+catalogoImplementacionRouter.delete('/tecnologias/:id', requirePermiso('administrar_catalogos'), async (req, res, next) => {
+  try {
+    await catalogoService.eliminarTecnologia(req.params.id);
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+});
+
 catalogoImplementacionRouter.get('/parametros', requirePermiso('ver'), async (req, res, next) => {
   try {
     res.json(await catalogoService.getParametros());

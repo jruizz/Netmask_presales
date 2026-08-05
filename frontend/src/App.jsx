@@ -11,6 +11,7 @@ import Biblioteca from './pages/Biblioteca.jsx';
 import Auditoria from './pages/Auditoria.jsx';
 import Usuarios from './pages/Usuarios.jsx';
 import Comerciales from './pages/Comerciales.jsx';
+import CatalogoImplementacion from './pages/CatalogoImplementacion.jsx';
 
 export default function App() {
   return (
@@ -27,6 +28,7 @@ export default function App() {
         <Route path="/auditoria" element={<Auditoria />} />
         <Route path="/usuarios" element={<Usuarios />} />
         <Route path="/comerciales" element={<Comerciales />} />
+        <Route path="/catalogo-implementacion" element={<CatalogoImplementacion />} />
       </Route>
     </Routes>
   );

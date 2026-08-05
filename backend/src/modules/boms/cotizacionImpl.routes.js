@@ -3,7 +3,7 @@ import { z } from 'zod';
 import * as cotizacionService from '../cotizaciones/cotizacionImpl.service.js';
 import * as bomsService from './boms.service.js';
 import { authMiddleware } from '../../middlewares/authMiddleware.js';
-import { requirePermiso } from '../../middlewares/roleGuard.js';
+import { requirePermiso, requireRole } from '../../middlewares/roleGuard.js';
 import { HttpError } from '../../middlewares/errorHandler.js';
 
 export const cotizacionImplRouter = Router({ mergeParams: true });
@@ -12,7 +12,7 @@ cotizacionImplRouter.use(authMiddleware);
 const sedeSchema = z.object({
   nombre: z.string().min(1),
   ingenieros: z.number().int().positive(),
-  dias: z.number().nonnegative(),
+  dias: z.number().int().nonnegative(),
   alimentacionDia: z.number().nonnegative(),
   hospedajeDia: z.number().nonnegative(),
   transporteInternoDia: z.number().nonnegative(),
@@ -25,14 +25,15 @@ const cotizacionSchema = z.object({
   modo: z.enum(['epsp', 'netmask']),
   nivelIngenieria: z.number().int().min(1).max(3).default(2),
   condicion: z.enum(['interno', 'aliado']).default('interno'),
-  numeroPlantas: z.number().positive().default(1),
+  numeroPlantas: z.number().int().positive().default(1),
   trm: z.number().positive().optional(),
   bolsaHorasActiva: z.boolean().default(false),
   siteSurveyActivo: z.boolean().default(false),
+  requiereAprobacion: z.boolean().default(false),
   sedes: z.array(sedeSchema).default([]),
   tecnologiasSeleccionadas: z.array(z.object({
     tecnologiaId: z.number().int().positive(),
-    factorEquipos: z.number().nonnegative(),
+    factorEquipos: z.number().int().positive(),
   })).default([]),
   siteSurveySedes: z.array(z.object({
     nombreSede: z.string().min(1),
@@ -70,6 +71,66 @@ cotizacionImplRouter.delete('/', requirePermiso('crear'), async (req, res, next)
     await assertBomAccess(req);
     await cotizacionService.eliminarCotizacion(req.params.bomId);
     res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+});
+
+const comentarioSchema = z.object({ comentario: z.string().optional() });
+
+// Aprobacion opcional (solo aplica cuando requiere_aprobacion = true) — mismo patron y mismos roles que especificacion.routes.js.
+cotizacionImplRouter.post('/enviar-revision-lider', requireRole('preventa', 'superadmin'), async (req, res, next) => {
+  try {
+    await assertBomAccess(req);
+    res.json(await cotizacionService.enviarRevisionLider(req.params.bomId, req.user.id));
+  } catch (err) {
+    next(err);
+  }
+});
+
+cotizacionImplRouter.post('/aprobar-lider', requireRole('lider_tecnico', 'superadmin'), async (req, res, next) => {
+  try {
+    await assertBomAccess(req);
+    const { comentario } = comentarioSchema.parse(req.body);
+    res.json(await cotizacionService.aprobarLider(req.params.bomId, req.user.id, comentario));
+  } catch (err) {
+    next(err);
+  }
+});
+
+cotizacionImplRouter.post('/enviar-revision-gerencia', requireRole('lider_tecnico', 'superadmin'), async (req, res, next) => {
+  try {
+    await assertBomAccess(req);
+    res.json(await cotizacionService.enviarRevisionGerencia(req.params.bomId, req.user.id));
+  } catch (err) {
+    next(err);
+  }
+});
+
+cotizacionImplRouter.post('/aprobar-gerencia', requireRole('gerencia', 'superadmin'), async (req, res, next) => {
+  try {
+    await assertBomAccess(req);
+    const { comentario } = comentarioSchema.parse(req.body);
+    res.json(await cotizacionService.aprobarGerencia(req.params.bomId, req.user.id, comentario));
+  } catch (err) {
+    next(err);
+  }
+});
+
+cotizacionImplRouter.post('/rechazar', requireRole('lider_tecnico', 'gerencia', 'superadmin'), async (req, res, next) => {
+  try {
+    await assertBomAccess(req);
+    const { comentario } = comentarioSchema.parse(req.body);
+    res.json(await cotizacionService.rechazar(req.params.bomId, req.user.id, comentario));
+  } catch (err) {
+    next(err);
+  }
+});
+
+cotizacionImplRouter.post('/marcar-generado', requirePermiso('crear'), async (req, res, next) => {
+  try {
+    await assertBomAccess(req);
+    res.json(await cotizacionService.marcarGenerado(req.params.bomId, req.user.id));
   } catch (err) {
     next(err);
   }

@@ -22,6 +22,10 @@ const ESTADO_ESPEC_BADGE = {
   borrador: 'neutral', revision_lider: 'warning', aprobado_lider: 'info',
   revision_gerencia: 'warning', aprobado: 'success', generado: 'success', rechazado: 'danger',
 };
+const ESTADO_ESPEC_LABEL = {
+  borrador: 'Borrador', revision_lider: 'En revisión (Líder)', aprobado_lider: 'Aprobado (Líder)',
+  revision_gerencia: 'En revisión (Gerencia)', aprobado: 'Aprobado', generado: 'Generado', rechazado: 'Rechazado',
+};
 
 function ComponentCard({ icon: Icon, title, description, included, status, to }) {
   return (
@@ -56,18 +60,32 @@ export default function BomResumen() {
   const [documentos, setDocumentos] = useState([]);
   const [generando, setGenerando] = useState('');
   const [error, setError] = useState('');
+  const [notas, setNotas] = useState('');
+  const [guardandoNotas, setGuardandoNotas] = useState(false);
 
   function cargarDocumentos() {
     apiFetch(`/boms/${id}/documentos`, { token }).then(setDocumentos).catch(() => {});
   }
 
   useEffect(() => {
-    apiFetch(`/boms/${id}`, { token }).then(setBom).catch((err) => setError(err.message));
+    apiFetch(`/boms/${id}`, { token }).then((b) => { setBom(b); setNotas(b.notas || ''); }).catch((err) => setError(err.message));
     apiFetch(`/boms/${id}/hardware-items`, { token }).then(setHardwareItems).catch(() => {});
     apiFetch(`/boms/${id}/cotizacion-implementacion`, { token }).then(setCotizacion).catch(() => {});
     apiFetch(`/boms/${id}/especificacion`, { token }).then(setEspecificacion).catch(() => {});
     cargarDocumentos();
   }, [id, token]);
+
+  async function guardarNotas() {
+    setGuardandoNotas(true);
+    setError('');
+    try {
+      await apiFetch(`/boms/${id}`, { method: 'PUT', token, body: { notas } });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGuardandoNotas(false);
+    }
+  }
 
   async function generar(accion) {
     setError('');
@@ -117,7 +135,9 @@ export default function BomResumen() {
           description="Horas, viáticos y costo de la implementación técnica."
           included={!!cotizacion?.resultado}
           status={cotizacion?.resultado
-            ? (cotizacion.modo === 'epsp' ? `${Number(cotizacion.resultado.total_dias_epsp).toFixed(2)} días EPSP` : `$${money(cotizacion.resultado.total_cop)} COP`)
+            ? (cotizacion.requiere_aprobacion
+              ? (ESTADO_ESPEC_LABEL[cotizacion.estado] || cotizacion.estado)
+              : (cotizacion.modo === 'epsp' ? `${Number(cotizacion.resultado.total_dias_epsp).toFixed(2)} días EPSP` : `$${money(cotizacion.resultado.total_cop)} COP`))
             : 'No incluido'}
         />
         <ComponentCard
@@ -127,6 +147,13 @@ export default function BomResumen() {
           status={especificacion ? especificacion.estado : 'No incluido'}
         />
       </div>
+
+      <Card title="Comentarios" subtitle="Notas libres que se incluyen en el Excel BOM consolidado." style={{ marginBottom: 20 }}>
+        <textarea className="input" rows={3} value={notas} onChange={(e) => setNotas(e.target.value)} placeholder="Ej. supuestos, aclaraciones para el comercial, condiciones especiales..." />
+        <Button size="sm" variant="outline" onClick={guardarNotas} disabled={guardandoNotas} style={{ marginTop: 8 }}>
+          {guardandoNotas ? 'Guardando...' : 'Guardar comentarios'}
+        </Button>
+      </Card>
 
       <Card title="Generar documentos" subtitle="Exporta los documentos individuales o el consolidado del proyecto.">
         <div className="row" style={{ flexWrap: 'wrap', marginBottom: 20 }}>

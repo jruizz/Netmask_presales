@@ -58,6 +58,15 @@ export async function getBom(id, user) {
   return bom;
 }
 
+export async function actualizarBom(id, { notas }) {
+  const { rows } = await query(
+    'UPDATE boms SET notas = $1 WHERE id = $2 RETURNING id, notas',
+    [notas ?? null, id]
+  );
+  if (rows.length === 0) throw new HttpError(404, 'BOM no encontrado');
+  return rows[0];
+}
+
 export async function eliminarBom(id) {
   const { rows } = await query('DELETE FROM boms WHERE id = $1 RETURNING id', [id]);
   if (rows.length === 0) throw new HttpError(404, 'BOM no encontrado');

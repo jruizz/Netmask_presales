@@ -10,9 +10,9 @@ hardwareItemsRouter.use(authMiddleware);
 
 const agregarSchema = z.object({
   hardwareId: z.number().int().positive(),
-  cantidad: z.number().positive().default(1),
+  cantidad: z.number().int().positive().default(1),
 });
-const actualizarSchema = z.object({ cantidad: z.number().positive() });
+const actualizarSchema = z.object({ cantidad: z.number().int().positive() });
 
 async function assertBomAccess(req) {
   await bomsService.getBom(req.params.bomId, req.user);

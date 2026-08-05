@@ -40,6 +40,18 @@ bomsRouter.get('/:id', requirePermiso('ver'), async (req, res, next) => {
   }
 });
 
+const actualizarBomSchema = z.object({ notas: z.string().optional() });
+
+bomsRouter.put('/:id', requirePermiso('crear'), async (req, res, next) => {
+  try {
+    await bomsService.getBom(req.params.id, req.user);
+    const data = actualizarBomSchema.parse(req.body);
+    res.json(await bomsService.actualizarBom(req.params.id, data));
+  } catch (err) {
+    next(err);
+  }
+});
+
 bomsRouter.delete('/:id', requireRole('superadmin'), async (req, res, next) => {
   try {
     await bomsService.eliminarBom(req.params.id);

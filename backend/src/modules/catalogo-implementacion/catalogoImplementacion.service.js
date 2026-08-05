@@ -63,6 +63,60 @@ export async function crearTecnologia({ grupoNombre, nombre, actividades }, crea
   }
 }
 
+export async function actualizarTecnologia(id, { grupoNombre, nombre, actividades }) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const { rows: existeRows } = await client.query('SELECT id FROM catalogo_impl_tecnologias WHERE id = $1', [id]);
+    if (existeRows.length === 0) throw new HttpError(404, 'Tecnología no encontrada');
+
+    let { rows: grupoRows } = await client.query('SELECT id FROM catalogo_impl_grupos WHERE nombre = $1', [grupoNombre]);
+    let grupoId;
+    if (grupoRows.length === 0) {
+      const inserted = await client.query('INSERT INTO catalogo_impl_grupos (nombre) VALUES ($1) RETURNING id', [grupoNombre]);
+      grupoId = inserted.rows[0].id;
+    } else {
+      grupoId = grupoRows[0].id;
+    }
+
+    try {
+      await client.query(
+        'UPDATE catalogo_impl_tecnologias SET grupo_id = $1, nombre = $2 WHERE id = $3',
+        [grupoId, nombre, id]
+      );
+    } catch (err) {
+      if (err.code === '23505') throw new HttpError(409, `Ya existe una tecnología con el nombre "${nombre}"`);
+      throw err;
+    }
+
+    await client.query('DELETE FROM catalogo_impl_actividades WHERE tecnologia_id = $1', [id]);
+    for (const [i, a] of actividades.entries()) {
+      await client.query(
+        `INSERT INTO catalogo_impl_actividades (tecnologia_id, texto, horas, modo, unidades_por_equipo, orden)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [id, a.texto, a.horas, a.modo, a.unidadesPorEquipo || 1, i + 1]
+      );
+    }
+
+    await client.query('COMMIT');
+    return { id, nombre, grupoId };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+export async function eliminarTecnologia(id) {
+  const { rows } = await query(
+    'UPDATE catalogo_impl_tecnologias SET activo = false WHERE id = $1 RETURNING id',
+    [id]
+  );
+  if (rows.length === 0) throw new HttpError(404, 'Tecnología no encontrada');
+}
+
 export async function getParametros() {
   const { rows } = await query('SELECT clave, valor FROM catalogo_impl_parametros');
   const obj = {};

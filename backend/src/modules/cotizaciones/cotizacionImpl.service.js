@@ -44,12 +44,14 @@ function mapSedeEntrada(s) {
   };
 }
 
+const ESTADOS_EDITABLES = ['borrador', 'rechazado'];
+
 export async function getCotizacion(bomId) {
   const { rows } = await query('SELECT * FROM cotizaciones_impl WHERE bom_id = $1', [bomId]);
   if (rows.length === 0) return null;
   const cotizacion = rows[0];
 
-  const [{ rows: sedes }, { rows: tecnologiasSeleccionadas }, { rows: siteSurveySedes }, { rows: resultadoRows }] = await Promise.all([
+  const [{ rows: sedes }, { rows: tecnologiasSeleccionadas }, { rows: siteSurveySedes }, { rows: resultadoRows }, { rows: historial }] = await Promise.all([
     query('SELECT * FROM cotizaciones_impl_sedes WHERE cotizacion_id = $1 ORDER BY id', [cotizacion.id]),
     query(
       `SELECT ts.tecnologia_id, ts.factor_equipos, t.nombre AS tecnologia_nombre
@@ -66,6 +68,13 @@ export async function getCotizacion(bomId) {
       [cotizacion.id]
     ),
     query('SELECT * FROM cotizaciones_impl_resultado WHERE cotizacion_id = $1', [cotizacion.id]),
+    query(
+      `SELECT h.*, u.nombre AS usuario_nombre
+       FROM cotizaciones_impl_historial_estado h
+       JOIN usuarios u ON u.id = h.usuario_id
+       WHERE h.cotizacion_id = $1 ORDER BY h.fecha ASC`,
+      [cotizacion.id]
+    ),
   ]);
 
   return {
@@ -74,32 +83,52 @@ export async function getCotizacion(bomId) {
     tecnologiasSeleccionadas,
     siteSurveySedes,
     resultado: resultadoRows[0] || null,
+    historial,
   };
 }
 
 export async function upsertYCalcular(bomId, data, userId) {
   const {
     modo, nivelIngenieria = 2, condicion = 'interno', numeroPlantas = 1, trm,
-    bolsaHorasActiva = false, siteSurveyActivo = false,
+    bolsaHorasActiva = false, siteSurveyActivo = false, requiereAprobacion = false,
     sedes = [], tecnologiasSeleccionadas = [], siteSurveySedes = [],
   } = data;
 
+  const existente = await getCotizacion(bomId);
+  if (existente && existente.requiere_aprobacion && !ESTADOS_EDITABLES.includes(existente.estado)) {
+    throw new HttpError(409, `No se puede editar: la cotización está en estado "${existente.estado}"`);
+  }
+
+  const esNueva = !existente;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    const { rows } = await client.query(
-      `INSERT INTO cotizaciones_impl (bom_id, modo, nivel_ingenieria, condicion, numero_plantas, trm, bolsa_horas_activa, site_survey_activo, creado_por)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-       ON CONFLICT (bom_id) DO UPDATE SET
-         modo = EXCLUDED.modo, nivel_ingenieria = EXCLUDED.nivel_ingenieria, condicion = EXCLUDED.condicion,
+    let insertCols = `bom_id, modo, nivel_ingenieria, condicion, numero_plantas, trm, bolsa_horas_activa, site_survey_activo, requiere_aprobacion, creado_por`;
+    let insertVals = `$1,$2,$3,$4,$5,$6,$7,$8,$9,$10`;
+    let updateSet = `modo = EXCLUDED.modo, nivel_ingenieria = EXCLUDED.nivel_ingenieria, condicion = EXCLUDED.condicion,
          numero_plantas = EXCLUDED.numero_plantas, trm = EXCLUDED.trm,
          bolsa_horas_activa = EXCLUDED.bolsa_horas_activa, site_survey_activo = EXCLUDED.site_survey_activo,
-         actualizado_en = now()
+         requiere_aprobacion = EXCLUDED.requiere_aprobacion, actualizado_en = now()`;
+    // estado se deja fuera del UPDATE a proposito: solo cambia via las transiciones de aprobacion,
+    // nunca al guardar/recalcular (mismo criterio que especificaciones.service.js).
+
+    const { rows } = await client.query(
+      `INSERT INTO cotizaciones_impl (${insertCols})
+       VALUES (${insertVals})
+       ON CONFLICT (bom_id) DO UPDATE SET ${updateSet}
        RETURNING id`,
-      [bomId, modo, nivelIngenieria, condicion, numeroPlantas, trm || null, bolsaHorasActiva, siteSurveyActivo, userId]
+      [bomId, modo, nivelIngenieria, condicion, numeroPlantas, trm || null, bolsaHorasActiva, siteSurveyActivo, requiereAprobacion, userId]
     );
     const cotizacionId = rows[0].id;
+
+    if (esNueva) {
+      await client.query(
+        `INSERT INTO cotizaciones_impl_historial_estado (cotizacion_id, estado_anterior, estado_nuevo, usuario_id, comentario)
+         VALUES ($1, NULL, 'borrador', $2, 'Cotización creada')`,
+        [cotizacionId, userId]
+      );
+    }
 
     await client.query('DELETE FROM cotizaciones_impl_sedes WHERE cotizacion_id = $1', [cotizacionId]);
     for (const s of sedes) {
@@ -193,3 +222,53 @@ export async function eliminarCotizacion(bomId) {
   const { rows } = await query('DELETE FROM cotizaciones_impl WHERE bom_id = $1 RETURNING id', [bomId]);
   if (rows.length === 0) throw new HttpError(404, 'Este BOM no tiene componente de Implementación');
 }
+
+// ── Aprobacion (solo relevante cuando requiere_aprobacion = true; ver 11_aprobacion_implementacion.sql) ──
+async function transicionar(bomId, { estadosPermitidos, estadoNuevo, userId, comentario }) {
+  const existente = await getCotizacion(bomId);
+  if (!existente) throw new HttpError(404, 'Este BOM no tiene componente de Implementación');
+  if (!existente.requiere_aprobacion) {
+    throw new HttpError(409, 'Esta cotización no requiere aprobación (el checkbox está desactivado)');
+  }
+  if (!estadosPermitidos.includes(existente.estado)) {
+    throw new HttpError(409, `No se puede pasar a "${estadoNuevo}" desde el estado actual "${existente.estado}"`);
+  }
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      'UPDATE cotizaciones_impl SET estado = $1, actualizado_en = now() WHERE bom_id = $2',
+      [estadoNuevo, bomId]
+    );
+    await client.query(
+      `INSERT INTO cotizaciones_impl_historial_estado (cotizacion_id, estado_anterior, estado_nuevo, usuario_id, comentario)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [existente.id, existente.estado, estadoNuevo, userId, comentario || null]
+    );
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+  return getCotizacion(bomId);
+}
+
+export const enviarRevisionLider = (bomId, userId) =>
+  transicionar(bomId, { estadosPermitidos: ['borrador', 'rechazado'], estadoNuevo: 'revision_lider', userId });
+
+export const aprobarLider = (bomId, userId, comentario) =>
+  transicionar(bomId, { estadosPermitidos: ['revision_lider'], estadoNuevo: 'aprobado_lider', userId, comentario });
+
+export const enviarRevisionGerencia = (bomId, userId) =>
+  transicionar(bomId, { estadosPermitidos: ['aprobado_lider'], estadoNuevo: 'revision_gerencia', userId });
+
+export const aprobarGerencia = (bomId, userId, comentario) =>
+  transicionar(bomId, { estadosPermitidos: ['revision_gerencia'], estadoNuevo: 'aprobado', userId, comentario });
+
+export const rechazar = (bomId, userId, comentario) =>
+  transicionar(bomId, { estadosPermitidos: ['revision_lider', 'revision_gerencia'], estadoNuevo: 'rechazado', userId, comentario });
+
+export const marcarGenerado = (bomId, userId) =>
+  transicionar(bomId, { estadosPermitidos: ['aprobado'], estadoNuevo: 'generado', userId });

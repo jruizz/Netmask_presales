@@ -11,18 +11,39 @@ export function calcBolsaHoras(sedes, horasDia) {
   return sedes.reduce((t, s) => t + s.ingenieros * s.dias * horasDia, 0);
 }
 
-export function calcViaticosCOP(sedes, tarifaLocal, bolsaActiva, horasDia) {
-  let t = 0;
-  sedes.forEach((s) => {
+// Desglose de viaticos por sede, para el Excel de Cotizacion (tabla "Viaticos para
+// la Implementacion" del formato real) y para calcViaticosCOP (que ahora solo suma
+// esto, en vez de duplicar la formula).
+export function calcViaticosPorSede(sedes, tarifaLocal, bolsaActiva, horasDia) {
+  return sedes.map((s) => {
+    let total = 0;
     if (s.esLocal && bolsaActiva) {
       // Ya cubierto por la Bolsa de Horas: no se duplica como viatico.
+      total = 0;
     } else if (s.esLocal && tarifaLocal) {
-      t += s.ingenieros * s.dias * horasDia * tarifaLocal;
+      total = s.ingenieros * s.dias * horasDia * tarifaLocal;
     } else {
-      t += (s.ingenieros * s.dias * (s.alimentacionDia + s.hospedajeDia + s.transporteInternoDia) + s.vuelo + s.transporteAeropuerto) * s.ingenieros;
+      total = (s.ingenieros * s.dias * (s.alimentacionDia + s.hospedajeDia + s.transporteInternoDia) + s.vuelo + s.transporteAeropuerto) * s.ingenieros;
     }
+    return {
+      nombre: s.nombre,
+      totalViaticos: total,
+      totalViaticosPorVisita: s.ingenieros > 0 ? total / s.ingenieros : total,
+      cantIngenieros: s.ingenieros,
+      vuelos: s.vuelo,
+      tiempoEnSitio: s.dias,
+      alimentacion: s.alimentacionDia,
+      hospedaje: s.hospedajeDia,
+      transporteInterno: s.transporteInternoDia,
+      transporteAeropuerto: s.transporteAeropuerto,
+      esLocal: !!s.esLocal,
+    };
   });
-  return t;
+}
+
+export function calcViaticosCOP(sedes, tarifaLocal, bolsaActiva, horasDia) {
+  return calcViaticosPorSede(sedes, tarifaLocal, bolsaActiva, horasDia)
+    .reduce((t, s) => t + s.totalViaticos, 0);
 }
 
 export function calcSiteSurveyTotals(siteSurveySedes, rangosById) {
@@ -102,7 +123,8 @@ export function recalcularEpsp(ctx) {
   const horasConPM = totalHoras + pm;
   const dias = horasConPM / params.HORAS_DIA;
   const diasEpspTrabajo = dias / params.FACTOR_EPSP;
-  const viaticosCop = calcViaticosCOP(sedes, undefined, bolsaHorasActiva, params.HORAS_DIA);
+  const viaticosPorSede = calcViaticosPorSede(sedes, undefined, bolsaHorasActiva, params.HORAS_DIA);
+  const viaticosCop = viaticosPorSede.reduce((t, s) => t + s.totalViaticos, 0);
   const viaticosUsd = trm ? viaticosCop / trm : 0;
   const diasEpspViaticos = viaticosUsd / params.USD_DIA_EPSP;
   const totalDiasEpsp = diasEpspTrabajo + diasEpspViaticos;
@@ -118,6 +140,7 @@ export function recalcularEpsp(ctx) {
     totalDiasEpsp,
     viaticosCop,
     viaticosUsd,
+    viaticosPorSede,
     costoIngenieriaCop: null,
     totalCop: null,
     siteSurvey: null,
@@ -163,11 +186,13 @@ export function recalcularNetmask(ctx) {
   const pmCosto = pm * tarifa;
 
   const costoIngenieriaCop = techCosto + bolsaCosto + (siteSurvey ? siteSurvey.costo : 0) + pmCosto;
-  const viaticosCop = calcViaticosCOP(sedes, tarifa, bolsaHorasActiva, params.HORAS_DIA);
+  const viaticosPorSede = calcViaticosPorSede(sedes, tarifa, bolsaHorasActiva, params.HORAS_DIA);
+  const viaticosCop = viaticosPorSede.reduce((t, s) => t + s.totalViaticos, 0);
   const totalCop = costoIngenieriaCop + viaticosCop;
 
   return {
     modo: 'netmask',
+    tarifa,
     totalHoras: totalHorasUmbral + pm,
     pmHoras: pm,
     bolsaVal,
@@ -178,6 +203,7 @@ export function recalcularNetmask(ctx) {
     totalDiasEpsp: null,
     viaticosCop,
     viaticosUsd: null,
+    viaticosPorSede,
     costoIngenieriaCop,
     totalCop,
   };

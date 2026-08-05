@@ -5,9 +5,19 @@ import { apiFetch } from '../services/api.js';
 import PageHeader from '../components/PageHeader.jsx';
 import Card from '../components/Card.jsx';
 import Button from '../components/Button.jsx';
+import Badge from '../components/Badge.jsx';
 import { IconTrash } from '../components/icons.jsx';
 
 const money = (n) => Number(n).toLocaleString('es-CO', { maximumFractionDigits: 0 });
+
+const ESTADOS_LABEL = {
+  borrador: 'Borrador', revision_lider: 'En revisión — Líder Técnico', aprobado_lider: 'Aprobado por Líder Técnico',
+  revision_gerencia: 'En revisión — Gerencia', aprobado: 'Aprobado', generado: 'Generado final', rechazado: 'Rechazado',
+};
+const ESTADOS_BADGE = {
+  borrador: 'neutral', revision_lider: 'warning', aprobado_lider: 'info',
+  revision_gerencia: 'warning', aprobado: 'success', generado: 'success', rechazado: 'danger',
+};
 
 function nuevaSede(nombre) {
   return {
@@ -19,53 +29,50 @@ function nuevaSede(nombre) {
 
 export default function BomImplementacion() {
   const { id } = useParams();
-  const { token } = useAuth();
+  const { token, me } = useAuth();
 
   const [tecnologias, setTecnologias] = useState([]);
-  const [rangos, setRangos] = useState([]);
   const [tarifas, setTarifas] = useState(null);
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [resultado, setResultado] = useState(null);
+  const [cotizacion, setCotizacion] = useState(null);
 
   const [modo, setModo] = useState('netmask');
   const [nivelIngenieria, setNivelIngenieria] = useState(2);
   const [esAliado, setEsAliado] = useState(false);
   const [numeroPlantas, setNumeroPlantas] = useState(1);
   const [trm, setTrm] = useState(4000);
-  const [bolsaHorasActiva, setBolsaHorasActiva] = useState(false);
-  const [siteSurveyActivo, setSiteSurveyActivo] = useState(false);
+  const [requiereAprobacion, setRequiereAprobacion] = useState(false);
   const [sedes, setSedes] = useState([nuevaSede('Sede 1')]);
-  const [siteSurveySedes, setSiteSurveySedes] = useState([]);
   const [techState, setTechState] = useState({});
+  const [expandidas, setExpandidas] = useState({});
 
   useEffect(() => {
     async function cargar() {
       try {
-        const [tecs, rgs, trf, sugerencias] = await Promise.all([
+        const [tecs, trf, sugerencias] = await Promise.all([
           apiFetch('/catalogo-implementacion/tecnologias', { token }),
-          apiFetch('/catalogo-implementacion/site-survey-rangos', { token }),
           apiFetch('/catalogo-implementacion/tarifas', { token }),
           apiFetch(`/boms/${id}/sugerencias-implementacion`, { token }),
         ]);
         setTecnologias(tecs);
-        setRangos(rgs);
         setTarifas(trf);
 
         const inicial = {};
         sugerencias.forEach((s) => {
-          inicial[s.tecnologia_id] = { checked: true, factor: Number(s.factor_equipos_sugerido) };
+          inicial[s.tecnologia_id] = { checked: true, factor: Math.round(Number(s.factor_equipos_sugerido)) || 1 };
         });
 
         try {
           const existente = await apiFetch(`/boms/${id}/cotizacion-implementacion`, { token });
+          setCotizacion(existente);
           setModo(existente.modo);
           setNivelIngenieria(existente.nivel_ingenieria);
           setEsAliado(existente.condicion === 'aliado');
           setNumeroPlantas(Number(existente.numero_plantas));
           setTrm(existente.trm ? Number(existente.trm) : 4000);
-          setBolsaHorasActiva(existente.bolsa_horas_activa);
-          setSiteSurveyActivo(existente.site_survey_activo);
+          setRequiereAprobacion(!!existente.requiere_aprobacion);
           if (existente.sedes.length) {
             setSedes(existente.sedes.map((s) => ({
               nombre: s.nombre, ingenieros: s.ingenieros, dias: Number(s.dias),
@@ -74,9 +81,8 @@ export default function BomImplementacion() {
               vuelo: Number(s.vuelo), esLocal: s.es_local,
             })));
           }
-          setSiteSurveySedes(existente.siteSurveySedes.map((s) => ({ nombreSede: s.nombre_sede, rangoId: s.rango_id })));
           existente.tecnologiasSeleccionadas.forEach((t) => {
-            inicial[t.tecnologia_id] = { checked: true, factor: Number(t.factor_equipos) };
+            inicial[t.tecnologia_id] = { checked: true, factor: Math.round(Number(t.factor_equipos)) || 1 };
           });
           setResultado(existente.resultado);
         } catch {
@@ -98,7 +104,11 @@ export default function BomImplementacion() {
     }));
   }
   function setTechFactor(tecId, factor) {
+    factor = Math.max(1, Math.round(factor) || 1);
     setTechState((prev) => ({ ...prev, [tecId]: { ...prev[tecId], factor } }));
+  }
+  function toggleExpandida(tecId) {
+    setExpandidas((prev) => ({ ...prev, [tecId]: !prev[tecId] }));
   }
 
   function actualizarSede(i, campo, valor) {
@@ -109,16 +119,6 @@ export default function BomImplementacion() {
   }
   function quitarSede(i) {
     setSedes((prev) => prev.filter((_, idx) => idx !== i));
-  }
-
-  function agregarSiteSurveySede() {
-    setSiteSurveySedes((prev) => [...prev, { nombreSede: `Sede ${prev.length + 1}`, rangoId: rangos[0]?.id }]);
-  }
-  function actualizarSiteSurveySede(i, campo, valor) {
-    setSiteSurveySedes((prev) => prev.map((s, idx) => (idx === i ? { ...s, [campo]: valor } : s)));
-  }
-  function quitarSiteSurveySede(i) {
-    setSiteSurveySedes((prev) => prev.filter((_, idx) => idx !== i));
   }
 
   async function guardarYCalcular() {
@@ -135,18 +135,28 @@ export default function BomImplementacion() {
         condicion: esAliado ? 'aliado' : 'interno',
         numeroPlantas,
         trm: modo === 'epsp' ? trm : undefined,
-        bolsaHorasActiva,
-        siteSurveyActivo: modo === 'netmask' ? siteSurveyActivo : false,
+        requiereAprobacion,
         sedes,
         tecnologiasSeleccionadas,
-        siteSurveySedes: modo === 'netmask' && siteSurveyActivo ? siteSurveySedes : [],
       };
       const res = await apiFetch(`/boms/${id}/cotizacion-implementacion`, { method: 'PUT', token, body });
       setResultado(res.resultado);
+      setCotizacion(res);
     } catch (err) {
       setError(err.message);
     } finally {
       setGuardando(false);
+    }
+  }
+
+  async function ejecutarAccion(accion, comentario) {
+    setError('');
+    try {
+      const res = await apiFetch(`/boms/${id}/cotizacion-implementacion/${accion}`, { method: 'POST', token, body: comentario ? { comentario } : {} });
+      setCotizacion(res);
+      setResultado(res.resultado);
+    } catch (err) {
+      setError(err.message);
     }
   }
 
@@ -156,16 +166,61 @@ export default function BomImplementacion() {
   }, {});
 
   const tarifaActual = tarifas ? tarifas[esAliado ? 'aliado' : 'interno'][nivelIngenieria] : null;
+  const editable = !cotizacion || !cotizacion.requiere_aprobacion || ['borrador', 'rechazado'].includes(cotizacion.estado);
+  const rol = me?.rol;
 
   return (
     <div className="content">
       <PageHeader back={`/boms/${id}`} title="Implementación" subtitle="Dimensiona horas, viáticos y tecnologías del proyecto." />
       {error && <div className="alert alert-danger">{error}</div>}
 
+      {cotizacion?.requiere_aprobacion && (
+        <Card style={{ marginBottom: 20 }}>
+          <div className="row-between">
+            <div className="row">
+              <strong>Estado:</strong> <Badge variant={ESTADOS_BADGE[cotizacion.estado] || 'neutral'}>{ESTADOS_LABEL[cotizacion.estado] || cotizacion.estado}</Badge>
+            </div>
+            <div className="row" style={{ flexWrap: 'wrap' }}>
+              {cotizacion.estado === 'borrador' && (rol === 'preventa' || rol === 'superadmin') && (
+                <Button size="sm" onClick={() => ejecutarAccion('enviar-revision-lider')}>Enviar a revisión (Líder Técnico)</Button>
+              )}
+              {cotizacion.estado === 'rechazado' && (rol === 'preventa' || rol === 'superadmin') && (
+                <Button size="sm" onClick={() => ejecutarAccion('enviar-revision-lider')}>Reenviar a revisión</Button>
+              )}
+              {cotizacion.estado === 'revision_lider' && (rol === 'lider_tecnico' || rol === 'superadmin') && (
+                <>
+                  <Button size="sm" onClick={() => ejecutarAccion('aprobar-lider')}>Aprobar (Líder Técnico)</Button>
+                  <Button size="sm" variant="danger" onClick={() => ejecutarAccion('rechazar', 'Rechazado por líder técnico')}>Rechazar</Button>
+                </>
+              )}
+              {cotizacion.estado === 'aprobado_lider' && (rol === 'lider_tecnico' || rol === 'superadmin') && (
+                <Button size="sm" onClick={() => ejecutarAccion('enviar-revision-gerencia')}>Enviar a revisión (Gerencia)</Button>
+              )}
+              {cotizacion.estado === 'revision_gerencia' && (rol === 'gerencia' || rol === 'superadmin') && (
+                <>
+                  <Button size="sm" onClick={() => ejecutarAccion('aprobar-gerencia')}>Aprobar (Gerencia)</Button>
+                  <Button size="sm" variant="danger" onClick={() => ejecutarAccion('rechazar', 'Rechazado por gerencia')}>Rechazar</Button>
+                </>
+              )}
+              {cotizacion.estado === 'aprobado' && (
+                <Button size="sm" onClick={() => ejecutarAccion('marcar-generado')}>Marcar como generado</Button>
+              )}
+            </div>
+          </div>
+          {cotizacion.historial?.length > 0 && (
+            <ul className="text-sm muted" style={{ margin: '12px 0 0', paddingLeft: 18 }}>
+              {cotizacion.historial.map((h) => (
+                <li key={h.id} style={{ marginBottom: 4 }}>{new Date(h.fecha).toLocaleString('es-CO')} — {h.estado_anterior || '—'} → {h.estado_nuevo} ({h.usuario_nombre}){h.comentario ? `: ${h.comentario}` : ''}</li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      )}
+
       <Card title="Proyecto" style={{ marginBottom: 16 }}>
         <div className="field">
           <label>Modo</label>
-          <select className="input" value={modo} onChange={(e) => setModo(e.target.value)}>
+          <select className="input" disabled={!editable} value={modo} onChange={(e) => setModo(e.target.value)}>
             <option value="netmask">Servicio Netmask (COP)</option>
             <option value="epsp">Servicio EPSP (días EPSP, TD Synnex/Fortinet)</option>
           </select>
@@ -173,7 +228,7 @@ export default function BomImplementacion() {
         <div className="form-grid">
           <div className="field">
             <label>Nivel de ingeniería</label>
-            <select className="input" value={nivelIngenieria} onChange={(e) => setNivelIngenieria(Number(e.target.value))}>
+            <select className="input" disabled={!editable} value={nivelIngenieria} onChange={(e) => setNivelIngenieria(Number(e.target.value))}>
               <option value={1}>Nivel I</option>
               <option value={2}>Nivel II</option>
               <option value={3}>Nivel III</option>
@@ -181,88 +236,96 @@ export default function BomImplementacion() {
           </div>
           <div className="field">
             <label>Número de plantas/sedes</label>
-            <input className="input" type="number" min="1" value={numeroPlantas} onChange={(e) => setNumeroPlantas(Number(e.target.value))} />
+            <input className="input" type="number" min="1" step="1" disabled={!editable} value={numeroPlantas}
+              onChange={(e) => setNumeroPlantas(Math.max(1, Math.round(Number(e.target.value)) || 1))} />
           </div>
         </div>
         <label className="checkbox-row" style={{ marginBottom: 10 }}>
-          <input type="checkbox" checked={esAliado} onChange={(e) => setEsAliado(e.target.checked)} /> Es aliado
+          <input type="checkbox" disabled={!editable} checked={esAliado} onChange={(e) => setEsAliado(e.target.checked)} /> Es aliado
           {tarifaActual && <span className="muted">· Tarifa: ${money(tarifaActual)} COP/hora</span>}
         </label>
         {modo === 'epsp' && (
           <div className="field">
             <label>TRM (COP/USD)</label>
-            <input className="input" type="number" min="1" value={trm} onChange={(e) => setTrm(Number(e.target.value))} style={{ maxWidth: 200 }} />
+            <input className="input" type="number" min="1" step="1" disabled={!editable} value={trm}
+              onChange={(e) => setTrm(Math.max(1, Math.round(Number(e.target.value)) || 1))} style={{ maxWidth: 200 }} />
           </div>
         )}
-        <label className="checkbox-row" style={{ marginBottom: 8 }}>
-          <input type="checkbox" checked={bolsaHorasActiva} onChange={(e) => setBolsaHorasActiva(e.target.checked)} />
-          Bolsa de horas (cobro por jornada en sitio, sin desglose de actividades)
+        <label className="checkbox-row">
+          <input type="checkbox" disabled={!editable} checked={requiereAprobacion} onChange={(e) => setRequiereAprobacion(e.target.checked)} />
+          Este proyecto requiere aprobación (implementación de gran tamaño)
         </label>
-        {modo === 'netmask' && (
-          <label className="checkbox-row">
-            <input type="checkbox" checked={siteSurveyActivo} onChange={(e) => setSiteSurveyActivo(e.target.checked)} />
-            Incluir Site Survey (Ekahau)
-          </label>
-        )}
+        <p className="text-sm muted" style={{ marginTop: 4 }}>
+          Criterio a juicio del preventa según el cliente/proyecto — no hay un umbral automático de horas o costo.
+        </p>
       </Card>
 
       <Card title="Viáticos por sede" style={{ marginBottom: 16 }}>
         {sedes.map((s, i) => (
           <div key={i} style={{ borderBottom: i < sedes.length - 1 ? '1px solid var(--nm-border)' : 'none', paddingBottom: 14, marginBottom: 14 }}>
             <div className="row-between" style={{ marginBottom: 6 }}>
-              <input value={s.nombre} onChange={(e) => actualizarSede(i, 'nombre', e.target.value)}
+              <input value={s.nombre} disabled={!editable} onChange={(e) => actualizarSede(i, 'nombre', e.target.value)}
                 style={{ fontWeight: 700, border: 'none', fontSize: 14, background: 'transparent', color: 'var(--nm-navy)' }} />
-              {sedes.length > 1 && (
+              {editable && sedes.length > 1 && (
                 <Button variant="ghost" size="sm" onClick={() => quitarSede(i)} style={{ color: 'var(--nm-danger)' }}>
                   <IconTrash width={14} height={14} /> Quitar
                 </Button>
               )}
             </div>
             <label className="checkbox-row" style={{ marginBottom: 10 }}>
-              <input type="checkbox" checked={s.esLocal} onChange={(e) => actualizarSede(i, 'esLocal', e.target.checked)} /> Sede local (sin viáticos de viaje)
+              <input type="checkbox" disabled={!editable} checked={s.esLocal} onChange={(e) => actualizarSede(i, 'esLocal', e.target.checked)} /> Sede local (sin viáticos de viaje)
             </label>
             <div className="form-grid-3">
-              <div className="field"><label>Ingenieros</label><input className="input" type="number" min="1" value={s.ingenieros} onChange={(e) => actualizarSede(i, 'ingenieros', Number(e.target.value))} /></div>
-              <div className="field"><label>Días en sitio</label><input className="input" type="number" min="0" value={s.dias} onChange={(e) => actualizarSede(i, 'dias', Number(e.target.value))} /></div>
-              <div className="field"><label>Vuelo (COP)</label><input className="input" type="number" min="0" value={s.vuelo} onChange={(e) => actualizarSede(i, 'vuelo', Number(e.target.value))} /></div>
-              <div className="field"><label>Transp. aeropuerto</label><input className="input" type="number" min="0" value={s.transporteAeropuerto} onChange={(e) => actualizarSede(i, 'transporteAeropuerto', Number(e.target.value))} /></div>
-              <div className="field"><label>Alimentación/día</label><input className="input" type="number" min="0" value={s.alimentacionDia} onChange={(e) => actualizarSede(i, 'alimentacionDia', Number(e.target.value))} /></div>
-              <div className="field"><label>Hospedaje/día</label><input className="input" type="number" min="0" value={s.hospedajeDia} onChange={(e) => actualizarSede(i, 'hospedajeDia', Number(e.target.value))} /></div>
-              <div className="field"><label>Transp. interno/día</label><input className="input" type="number" min="0" value={s.transporteInternoDia} onChange={(e) => actualizarSede(i, 'transporteInternoDia', Number(e.target.value))} /></div>
+              <div className="field"><label>Ingenieros</label><input className="input" type="number" min="1" step="1" disabled={!editable} value={s.ingenieros} onChange={(e) => actualizarSede(i, 'ingenieros', Math.max(1, Math.round(Number(e.target.value)) || 1))} /></div>
+              <div className="field"><label>Días en sitio</label><input className="input" type="number" min="0" step="1" disabled={!editable} value={s.dias} onChange={(e) => actualizarSede(i, 'dias', Math.max(0, Math.round(Number(e.target.value)) || 0))} /></div>
+              <div className="field"><label>Vuelo (COP)</label><input className="input" type="number" min="0" disabled={!editable} value={s.vuelo} onChange={(e) => actualizarSede(i, 'vuelo', Number(e.target.value))} /></div>
+              <div className="field"><label>Transp. aeropuerto</label><input className="input" type="number" min="0" disabled={!editable} value={s.transporteAeropuerto} onChange={(e) => actualizarSede(i, 'transporteAeropuerto', Number(e.target.value))} /></div>
+              <div className="field"><label>Alimentación/día</label><input className="input" type="number" min="0" disabled={!editable} value={s.alimentacionDia} onChange={(e) => actualizarSede(i, 'alimentacionDia', Number(e.target.value))} /></div>
+              <div className="field"><label>Hospedaje/día</label><input className="input" type="number" min="0" disabled={!editable} value={s.hospedajeDia} onChange={(e) => actualizarSede(i, 'hospedajeDia', Number(e.target.value))} /></div>
+              <div className="field"><label>Transp. interno/día</label><input className="input" type="number" min="0" disabled={!editable} value={s.transporteInternoDia} onChange={(e) => actualizarSede(i, 'transporteInternoDia', Number(e.target.value))} /></div>
             </div>
           </div>
         ))}
-        <Button variant="outline" size="sm" onClick={agregarSede}>+ Agregar sede</Button>
+        {editable && <Button variant="outline" size="sm" onClick={agregarSede}>+ Agregar sede</Button>}
       </Card>
 
-      {modo === 'netmask' && siteSurveyActivo && (
-        <Card title="Site Survey (Ekahau)" style={{ marginBottom: 16 }}>
-          {siteSurveySedes.map((s, i) => (
-            <div key={i} className="row" style={{ marginBottom: 8 }}>
-              <input className="input" value={s.nombreSede} onChange={(e) => actualizarSiteSurveySede(i, 'nombreSede', e.target.value)} style={{ flex: 1 }} />
-              <select className="input" value={s.rangoId} onChange={(e) => actualizarSiteSurveySede(i, 'rangoId', Number(e.target.value))} style={{ flex: 1 }}>
-                {rangos.map((r) => <option key={r.id} value={r.id}>{r.etiqueta}</option>)}
-              </select>
-              <Button variant="ghost" size="sm" onClick={() => quitarSiteSurveySede(i)} style={{ color: 'var(--nm-danger)' }}><IconTrash width={14} height={14} /></Button>
-            </div>
-          ))}
-          <Button variant="outline" size="sm" onClick={agregarSiteSurveySede}>+ Agregar sede de Site Survey</Button>
-        </Card>
-      )}
-
-      <Card title="Tecnologías" style={{ marginBottom: 16 }}>
+      <Card title="Tecnologías" subtitle="Bolsa de Horas y Site Survey ahora se configuran desde Servicios Netmask." style={{ marginBottom: 16 }}>
         {Object.entries(gruposTecnologias).map(([grupo, techs]) => (
           <div key={grupo} style={{ marginBottom: 14 }}>
             <div className="sidebar-section-label" style={{ color: 'var(--nm-text-muted)', padding: '0 0 6px' }}>{grupo}</div>
             {techs.map((t) => {
               const st = techState[t.id];
+              const abierta = !!expandidas[t.id];
               return (
-                <div key={t.id} className="row" style={{ padding: '5px 0' }}>
-                  <input type="checkbox" checked={!!st?.checked} onChange={() => toggleTech(t.id)} />
-                  <span style={{ flex: 1, fontSize: 13.5 }}>{t.nombre}</span>
-                  {st?.checked && (
-                    <input className="input" type="number" min="0" step="0.5" value={st.factor} onChange={(e) => setTechFactor(t.id, Number(e.target.value))}
-                      title="Cantidad de equipos" style={{ width: 76 }} />
+                <div key={t.id} style={{ padding: '5px 0' }}>
+                  <div className="row">
+                    <input type="checkbox" disabled={!editable} checked={!!st?.checked} onChange={() => toggleTech(t.id)} />
+                    <span style={{ flex: 1, fontSize: 13.5 }}>{t.nombre}</span>
+                    {st?.checked && (
+                      <input className="input" type="number" min="1" step="1" disabled={!editable} value={st.factor}
+                        onChange={(e) => setTechFactor(t.id, Number(e.target.value))}
+                        title="Cantidad de equipos" style={{ width: 76 }} />
+                    )}
+                    <button type="button" onClick={() => toggleExpandida(t.id)}
+                      style={{ background: 'none', border: 'none', color: 'var(--nm-blue)', cursor: 'pointer', fontSize: 12, padding: '0 4px' }}>
+                      {abierta ? '▾ ocultar' : '▸ ver actividades'}
+                    </button>
+                  </div>
+                  {abierta && (
+                    <div className="table-wrap" style={{ marginTop: 6, marginBottom: 6 }}>
+                      <table className="nm-table">
+                        <thead><tr><th>Actividad</th><th>Horas</th><th>Modalidad</th></tr></thead>
+                        <tbody>
+                          {(t.actividades || []).map((a) => (
+                            <tr key={a.id}>
+                              <td className="text-sm">{a.texto}</td>
+                              <td className="text-sm">{a.horas}</td>
+                              <td className="text-sm muted">{a.modo === 'en_sitio' ? 'En sitio' : 'Remota'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   )}
                 </div>
               );
@@ -271,9 +334,11 @@ export default function BomImplementacion() {
         ))}
       </Card>
 
-      <Button onClick={guardarYCalcular} disabled={guardando} style={{ marginBottom: 24 }}>
-        {guardando ? 'Calculando...' : 'Calcular y guardar'}
-      </Button>
+      {editable && (
+        <Button onClick={guardarYCalcular} disabled={guardando} style={{ marginBottom: 24 }}>
+          {guardando ? 'Calculando...' : 'Calcular y guardar'}
+        </Button>
+      )}
 
       {resultado && (
         <Card title="Resultado">

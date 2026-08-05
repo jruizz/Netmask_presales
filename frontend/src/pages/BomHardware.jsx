@@ -17,7 +17,7 @@ export default function BomHardware() {
   const [q, setQ] = useState('');
   const [resultados, setResultados] = useState([]);
   const [creandoNuevo, setCreandoNuevo] = useState(false);
-  const [nuevoItem, setNuevoItem] = useState({ nombre: '', sku: '', numeroParte: '', descripcion: '', precio: '' });
+  const [nuevoItem, setNuevoItem] = useState({ nombre: '', sku: '', numeroParte: '', descripcion: '', precio: '', moneda: 'COP' });
   const [error, setError] = useState('');
 
   function cargarItems() {
@@ -56,7 +56,7 @@ export default function BomHardware() {
         body: { ...nuevoItem, precio: Number(nuevoItem.precio) || 0 },
       });
       await apiFetch(`/boms/${id}/hardware-items`, { method: 'POST', token, body: { hardwareId: creado.id, cantidad: 1 } });
-      setNuevoItem({ nombre: '', sku: '', numeroParte: '', descripcion: '', precio: '' });
+      setNuevoItem({ nombre: '', sku: '', numeroParte: '', descripcion: '', precio: '', moneda: 'COP' });
       setCreandoNuevo(false);
       cargarItems();
     } catch (err) {
@@ -65,6 +65,7 @@ export default function BomHardware() {
   }
 
   async function actualizarCantidad(itemId, cantidad) {
+    cantidad = Math.round(cantidad);
     if (cantidad <= 0) return;
     try {
       await apiFetch(`/boms/${id}/hardware-items/${itemId}`, { method: 'PUT', token, body: { cantidad } });
@@ -83,7 +84,12 @@ export default function BomHardware() {
     }
   }
 
-  const total = items.reduce((acc, it) => acc + Number(it.subtotal), 0);
+  // Los totales se agrupan por moneda -- nunca se suma COP con USD como si fueran lo mismo.
+  const totalesPorMoneda = items.reduce((acc, it) => {
+    const m = it.moneda || 'COP';
+    acc[m] = (acc[m] || 0) + Number(it.subtotal);
+    return acc;
+  }, {});
 
   return (
     <div className="content">
@@ -127,8 +133,15 @@ export default function BomHardware() {
                 <input className="input" value={nuevoItem.descripcion} onChange={(e) => setNuevoItem({ ...nuevoItem, descripcion: e.target.value })} />
               </div>
               <div className="field">
-                <label>Precio (COP)</label>
+                <label>Precio</label>
                 <input className="input" type="number" min="0" step="0.01" required value={nuevoItem.precio} onChange={(e) => setNuevoItem({ ...nuevoItem, precio: e.target.value })} />
+              </div>
+              <div className="field">
+                <label>Moneda</label>
+                <select className="input" value={nuevoItem.moneda} onChange={(e) => setNuevoItem({ ...nuevoItem, moneda: e.target.value })}>
+                  <option value="COP">COP</option>
+                  <option value="USD">USD</option>
+                </select>
               </div>
             </div>
             <Button type="submit">Crear y agregar al BOM</Button>
@@ -153,11 +166,11 @@ export default function BomHardware() {
                     <td>{it.nombre}</td>
                     <td className="muted">{it.sku || '—'}</td>
                     <td>
-                      <input className="input" type="number" min="0.01" step="0.01" value={it.cantidad}
+                      <input className="input" type="number" min="1" step="1" value={it.cantidad}
                         onChange={(e) => actualizarCantidad(it.id, Number(e.target.value))} style={{ width: 80 }} />
                     </td>
-                    <td>${money(it.precio_unitario_snapshot)}</td>
-                    <td style={{ fontWeight: 600 }}>${money(it.subtotal)}</td>
+                    <td>${money(it.precio_unitario_snapshot)} {it.moneda || 'COP'}</td>
+                    <td style={{ fontWeight: 600 }}>${money(it.subtotal)} {it.moneda || 'COP'}</td>
                     <td>
                       <Button variant="ghost" size="sm" onClick={() => quitarItem(it.id)} style={{ color: 'var(--nm-danger)' }}>
                         <IconTrash width={15} height={15} />
@@ -167,11 +180,13 @@ export default function BomHardware() {
                 ))}
               </tbody>
               <tfoot>
-                <tr>
-                  <td colSpan={4} style={{ textAlign: 'right' }}>Total</td>
-                  <td style={{ color: 'var(--nm-blue-dark)' }}>${money(total)}</td>
-                  <td></td>
-                </tr>
+                {Object.entries(totalesPorMoneda).map(([moneda, total]) => (
+                  <tr key={moneda}>
+                    <td colSpan={4} style={{ textAlign: 'right' }}>Total {moneda}</td>
+                    <td style={{ color: 'var(--nm-blue-dark)' }}>${money(total)} {moneda}</td>
+                    <td></td>
+                  </tr>
+                ))}
               </tfoot>
             </table>
           </div>

@@ -50,7 +50,7 @@ function ComponentCard({ icon: Icon, title, description, included, status, to, r
         </details>
       )}
       <Link to={to}>
-        <Button block variant={included ? 'outline' : 'primary'}>{included ? 'Editar' : 'Configurar'}</Button>
+        <Button block variant={included ? 'outline' : 'primary'}>{included ? 'Ver / editar' : 'Configurar'}</Button>
       </Link>
     </div>
   );
@@ -78,17 +78,28 @@ export default function BomResumen() {
   const [notas, setNotas] = useState('');
   const [guardandoNotas, setGuardandoNotas] = useState(false);
   const [tarifas, setTarifas] = useState(null);
+  const [clientes, setClientes] = useState([]);
+  const [comerciales, setComerciales] = useState([]);
+  const [editandoDetalles, setEditandoDetalles] = useState(false);
+  const [detalles, setDetalles] = useState({ nombre: '', clienteId: '', comercialId: '', ubicacionProyecto: '', idOportunidad: '' });
+  const [guardandoDetalles, setGuardandoDetalles] = useState(false);
+
+  function cargarBom() {
+    return apiFetch(`/boms/${id}`, { token }).then((b) => { setBom(b); setNotas(b.notas || ''); return b; });
+  }
 
   function cargarDocumentos() {
     apiFetch(`/boms/${id}/documentos`, { token }).then(setDocumentos).catch(() => {});
   }
 
   useEffect(() => {
-    apiFetch(`/boms/${id}`, { token }).then((b) => { setBom(b); setNotas(b.notas || ''); }).catch((err) => setError(err.message));
+    cargarBom().catch((err) => setError(err.message));
     apiFetch(`/boms/${id}/hardware-items`, { token }).then(setHardwareItems).catch(() => {});
     apiFetch(`/boms/${id}/cotizacion-implementacion`, { token }).then(setCotizacion).catch(() => {});
     apiFetch(`/boms/${id}/especificacion`, { token }).then(setEspecificacion).catch(() => {});
     apiFetch('/catalogo-implementacion/tarifas', { token }).then(setTarifas).catch(() => {});
+    apiFetch('/clientes', { token }).then(setClientes).catch(() => {});
+    apiFetch('/comerciales', { token }).then(setComerciales).catch(() => {});
     cargarDocumentos();
   }, [id, token]);
 
@@ -101,6 +112,46 @@ export default function BomResumen() {
       setError(err.message);
     } finally {
       setGuardandoNotas(false);
+    }
+  }
+
+  function empezarEdicionDetalles() {
+    setDetalles({
+      nombre: bom.nombre,
+      clienteId: String(bom.cliente_id),
+      comercialId: bom.comercial_id ? String(bom.comercial_id) : '',
+      ubicacionProyecto: bom.ubicacion_proyecto || '',
+      idOportunidad: bom.id_oportunidad || '',
+    });
+    setEditandoDetalles(true);
+  }
+
+  async function guardarDetalles() {
+    setError('');
+    const idOportunidadTrim = detalles.idOportunidad.trim();
+    if (idOportunidadTrim && !/^OP-\d+$/.test(idOportunidadTrim)) {
+      setError('El ID de oportunidad debe tener el formato OP-#### (ej. OP-5309)');
+      return;
+    }
+    setGuardandoDetalles(true);
+    try {
+      await apiFetch(`/boms/${id}`, {
+        method: 'PUT',
+        token,
+        body: {
+          nombre: detalles.nombre,
+          clienteId: Number(detalles.clienteId),
+          comercialId: Number(detalles.comercialId),
+          ubicacionProyecto: detalles.ubicacionProyecto,
+          idOportunidad: idOportunidadTrim,
+        },
+      });
+      await cargarBom();
+      setEditandoDetalles(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGuardandoDetalles(false);
     }
   }
 
@@ -179,21 +230,85 @@ export default function BomResumen() {
     </div>
   );
 
+  const comercialesOT = comerciales.filter((c) => c.sector === 'OT');
+  const comercialesIT = comerciales.filter((c) => c.sector === 'IT');
+  const comercialesMixto = comerciales.filter((c) => c.sector === 'IT/OT');
+
   return (
     <div className="content">
       <PageHeader
         back="/"
         title={bom.nombre}
-        subtitle={<>
-          Cliente: <strong>{bom.cliente_nombre}</strong> &nbsp;·&nbsp;
-          Comercial: <strong>{bom.comercial_nombre || '—'}</strong> &nbsp;·&nbsp;
-          Ubicación: <strong>{bom.ubicacion_proyecto || '—'}</strong> &nbsp;·&nbsp;
-          Creado por {bom.creador_nombre}
-        </>}
+        subtitle={`Creado por ${bom.creador_nombre}`}
         actions={<Badge variant="info">{bom.estado}</Badge>}
       />
 
       {error && <div className="alert alert-danger">{error}</div>}
+
+      <Card
+        title="Detalles del proyecto"
+        actions={!editandoDetalles && <Button size="sm" variant="outline" onClick={empezarEdicionDetalles}>Editar</Button>}
+        style={{ marginBottom: 20 }}
+      >
+        {editandoDetalles ? (
+          <>
+            <div className="field">
+              <label>Nombre del proyecto</label>
+              <input className="input" value={detalles.nombre} onChange={(e) => setDetalles({ ...detalles, nombre: e.target.value })} />
+            </div>
+            <div className="field">
+              <label>Cliente</label>
+              <select className="input" value={detalles.clienteId} onChange={(e) => setDetalles({ ...detalles, clienteId: e.target.value })}>
+                {clientes.map((c) => <option key={c.id} value={c.id}>{c.nombre_cliente}</option>)}
+              </select>
+            </div>
+            <div className="field">
+              <label>Comercial asociado</label>
+              <select className="input" value={detalles.comercialId} onChange={(e) => setDetalles({ ...detalles, comercialId: e.target.value })}>
+                <option value="">-- Selecciona --</option>
+                {comercialesOT.length > 0 && (
+                  <optgroup label="OT">
+                    {comercialesOT.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                  </optgroup>
+                )}
+                {comercialesIT.length > 0 && (
+                  <optgroup label="IT">
+                    {comercialesIT.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                  </optgroup>
+                )}
+                {comercialesMixto.length > 0 && (
+                  <optgroup label="IT/OT">
+                    {comercialesMixto.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                  </optgroup>
+                )}
+              </select>
+            </div>
+            <div className="field">
+              <label>Ubicación del proyecto</label>
+              <input className="input" value={detalles.ubicacionProyecto} onChange={(e) => setDetalles({ ...detalles, ubicacionProyecto: e.target.value })} />
+            </div>
+            <div className="field">
+              <label>ID de la oportunidad <span className="muted">(opcional)</span></label>
+              <input className="input" value={detalles.idOportunidad} onChange={(e) => setDetalles({ ...detalles, idOportunidad: e.target.value })} placeholder="Ej. OP-5309" />
+            </div>
+            <div className="row">
+              <Button size="sm" onClick={guardarDetalles} disabled={guardandoDetalles}>{guardandoDetalles ? 'Guardando...' : 'Guardar'}</Button>
+              <Button size="sm" variant="outline" onClick={() => setEditandoDetalles(false)} disabled={guardandoDetalles}>Cancelar</Button>
+            </div>
+          </>
+        ) : (
+          <div className="table-wrap">
+            <table className="nm-table">
+              <tbody>
+                <tr><td style={{ fontWeight: 600 }}>Cliente</td><td>{bom.cliente_nombre}</td></tr>
+                <tr><td style={{ fontWeight: 600 }}>Comercial</td><td>{bom.comercial_nombre || '—'}</td></tr>
+                <tr><td style={{ fontWeight: 600 }}>Ubicación</td><td>{bom.ubicacion_proyecto || '—'}</td></tr>
+                <tr><td style={{ fontWeight: 600 }}>ID de oportunidad</td><td>{bom.id_oportunidad || '—'}</td></tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
 
       <div className="stack" style={{ marginBottom: 24 }}>
         <ComponentCard

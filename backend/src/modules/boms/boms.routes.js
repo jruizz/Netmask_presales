@@ -12,6 +12,7 @@ const crearBomSchema = z.object({
   nombre: z.string().min(1),
   comercialId: z.number().int().positive(),
   ubicacionProyecto: z.string().min(1),
+  idOportunidad: z.string().regex(/^OP-\d+$/, 'Formato invalido, debe ser OP-#### (ej. OP-5309)').optional(),
 });
 
 bomsRouter.get('/', requirePermiso('ver'), async (req, res, next) => {
@@ -40,7 +41,17 @@ bomsRouter.get('/:id', requirePermiso('ver'), async (req, res, next) => {
   }
 });
 
-const actualizarBomSchema = z.object({ notas: z.string().optional() });
+const actualizarBomSchema = z.object({
+  nombre: z.string().min(1).optional(),
+  clienteId: z.number().int().positive().optional(),
+  comercialId: z.number().int().positive().optional(),
+  ubicacionProyecto: z.string().min(1).optional(),
+  idOportunidad: z.union([
+    z.literal(''),
+    z.string().regex(/^OP-\d+$/, 'Formato invalido, debe ser OP-#### (ej. OP-5309)'),
+  ]).optional(),
+  notas: z.string().optional(),
+});
 
 bomsRouter.put('/:id', requirePermiso('crear'), async (req, res, next) => {
   try {

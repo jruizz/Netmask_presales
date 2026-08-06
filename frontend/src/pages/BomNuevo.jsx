@@ -14,6 +14,7 @@ export default function BomNuevo() {
   const [comercialId, setComercialId] = useState('');
   const [nombre, setNombre] = useState('');
   const [ubicacionProyecto, setUbicacionProyecto] = useState('');
+  const [idOportunidad, setIdOportunidad] = useState('');
   const [creandoCliente, setCreandoCliente] = useState(false);
   const [nuevoCliente, setNuevoCliente] = useState({ nombreCliente: '', sector: '' });
   const [error, setError] = useState('');
@@ -36,10 +37,20 @@ export default function BomNuevo() {
       }
       if (!finalClienteId) throw new Error('Selecciona o crea un cliente');
       if (!comercialId) throw new Error('Selecciona el comercial asociado');
+      const idOportunidadTrim = idOportunidad.trim();
+      if (idOportunidadTrim && !/^OP-\d+$/.test(idOportunidadTrim)) {
+        throw new Error('El ID de oportunidad debe tener el formato OP-#### (ej. OP-5309)');
+      }
       const bom = await apiFetch('/boms', {
         method: 'POST',
         token,
-        body: { clienteId: Number(finalClienteId), nombre, comercialId: Number(comercialId), ubicacionProyecto },
+        body: {
+          clienteId: Number(finalClienteId),
+          nombre,
+          comercialId: Number(comercialId),
+          ubicacionProyecto,
+          ...(idOportunidadTrim ? { idOportunidad: idOportunidadTrim } : {}),
+        },
       });
       navigate(`/boms/${bom.id}`);
     } catch (err) {
@@ -118,6 +129,12 @@ export default function BomNuevo() {
           <label>Ubicación del proyecto</label>
           <input className="input" value={ubicacionProyecto} onChange={(e) => setUbicacionProyecto(e.target.value)} required
             placeholder="Ej. Planta Rionegro, Sede principal Bogotá..." />
+        </div>
+
+        <div className="field">
+          <label>ID de la oportunidad <span className="muted">(opcional)</span></label>
+          <input className="input" value={idOportunidad} onChange={(e) => setIdOportunidad(e.target.value)}
+            placeholder="Ej. OP-5309" />
         </div>
 
         {error && <div className="alert alert-danger">{error}</div>}

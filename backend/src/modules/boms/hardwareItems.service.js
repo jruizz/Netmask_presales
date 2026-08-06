@@ -5,7 +5,7 @@ export async function listHardwareItems(bomId) {
   const { rows } = await query(
     `SELECT bhi.id, bhi.bom_id, bhi.cantidad, bhi.precio_unitario_snapshot,
             bhi.cantidad * bhi.precio_unitario_snapshot AS subtotal,
-            ch.id AS hardware_id, ch.nombre, ch.sku, ch.numero_parte, ch.descripcion, ch.moneda
+            ch.id AS hardware_id, ch.nombre, ch.marca, ch.sku, ch.numero_parte, ch.descripcion, ch.moneda
      FROM bom_hardware_items bhi
      JOIN catalogo_hardware ch ON ch.id = bhi.hardware_id
      WHERE bhi.bom_id = $1

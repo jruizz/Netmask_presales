@@ -17,7 +17,7 @@ export default function BomHardware() {
   const [q, setQ] = useState('');
   const [resultados, setResultados] = useState([]);
   const [creandoNuevo, setCreandoNuevo] = useState(false);
-  const [nuevoItem, setNuevoItem] = useState({ nombre: '', sku: '', numeroParte: '', descripcion: '', precio: '', moneda: 'COP' });
+  const [nuevoItem, setNuevoItem] = useState({ nombre: '', marca: '', sku: '', numeroParte: '', descripcion: '', precio: '', moneda: 'COP' });
   const [error, setError] = useState('');
 
   function cargarItems() {
@@ -56,7 +56,7 @@ export default function BomHardware() {
         body: { ...nuevoItem, precio: Number(nuevoItem.precio) || 0 },
       });
       await apiFetch(`/boms/${id}/hardware-items`, { method: 'POST', token, body: { hardwareId: creado.id, cantidad: 1 } });
-      setNuevoItem({ nombre: '', sku: '', numeroParte: '', descripcion: '', precio: '', moneda: 'COP' });
+      setNuevoItem({ nombre: '', marca: '', sku: '', numeroParte: '', descripcion: '', precio: '', moneda: 'COP' });
       setCreandoNuevo(false);
       cargarItems();
     } catch (err) {
@@ -105,7 +105,7 @@ export default function BomHardware() {
           <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 10px' }}>
             {resultados.map((r) => (
               <li key={r.id} className="row-between" style={{ padding: '8px 0', borderBottom: '1px solid var(--nm-border)' }}>
-                <span className="text-sm">{r.nombre} {r.sku && <em className="muted">({r.sku})</em>} — ${money(r.precio)} {r.moneda}</span>
+                <span className="text-sm">{r.marca && <strong>{r.marca} </strong>}{r.nombre} {r.sku && <em className="muted">({r.sku})</em>} — ${money(r.precio)} {r.moneda}</span>
                 <Button size="sm" variant="outline" onClick={() => agregarExistente(r.id)}><IconPlus width={14} height={14} /> Agregar</Button>
               </li>
             ))}
@@ -123,6 +123,10 @@ export default function BomHardware() {
               <div className="field">
                 <label>Nombre</label>
                 <input className="input" required value={nuevoItem.nombre} onChange={(e) => setNuevoItem({ ...nuevoItem, nombre: e.target.value })} />
+              </div>
+              <div className="field">
+                <label>Marca</label>
+                <input className="input" value={nuevoItem.marca} onChange={(e) => setNuevoItem({ ...nuevoItem, marca: e.target.value })} placeholder="Ej. Fortinet, Cisco..." />
               </div>
               <div className="field">
                 <label>SKU / número de parte</label>
@@ -157,13 +161,14 @@ export default function BomHardware() {
             <table className="nm-table">
               <thead>
                 <tr>
-                  <th>Nombre</th><th>SKU</th><th>Cantidad</th><th>Precio unitario</th><th>Subtotal</th><th></th>
+                  <th>Nombre</th><th>Marca</th><th>SKU</th><th>Cantidad</th><th>Precio unitario</th><th>Subtotal</th><th></th>
                 </tr>
               </thead>
               <tbody>
                 {items.map((it) => (
                   <tr key={it.id}>
                     <td>{it.nombre}</td>
+                    <td className="muted">{it.marca || '—'}</td>
                     <td className="muted">{it.sku || '—'}</td>
                     <td>
                       <input className="input" type="number" min="1" step="1" value={it.cantidad}
@@ -182,7 +187,7 @@ export default function BomHardware() {
               <tfoot>
                 {Object.entries(totalesPorMoneda).map(([moneda, total]) => (
                   <tr key={moneda}>
-                    <td colSpan={4} style={{ textAlign: 'right' }}>Total {moneda}</td>
+                    <td colSpan={5} style={{ textAlign: 'right' }}>Total {moneda}</td>
                     <td style={{ color: 'var(--nm-blue-dark)' }}>${money(total)} {moneda}</td>
                     <td></td>
                   </tr>

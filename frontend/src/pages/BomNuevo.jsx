@@ -51,6 +51,7 @@ export default function BomNuevo() {
 
   const comercialesOT = comerciales.filter((c) => c.sector === 'OT');
   const comercialesIT = comerciales.filter((c) => c.sector === 'IT');
+  const comercialesMixto = comerciales.filter((c) => c.sector === 'IT/OT');
 
   return (
     <div className="content" style={{ maxWidth: 560 }}>
@@ -103,6 +104,11 @@ export default function BomNuevo() {
             {comercialesIT.length > 0 && (
               <optgroup label="IT">
                 {comercialesIT.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+              </optgroup>
+            )}
+            {comercialesMixto.length > 0 && (
+              <optgroup label="IT/OT">
+                {comercialesMixto.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
               </optgroup>
             )}
           </select>

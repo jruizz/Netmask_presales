@@ -27,7 +27,7 @@ const ESTADO_ESPEC_LABEL = {
   revision_gerencia: 'En revisión (Gerencia)', aprobado: 'Aprobado', generado: 'Generado', rechazado: 'Rechazado',
 };
 
-function ComponentCard({ icon: Icon, title, description, included, status, to }) {
+function ComponentCard({ icon: Icon, title, description, included, status, to, resumen }) {
   return (
     <div className="card">
       <div className="row" style={{ marginBottom: 10 }}>
@@ -43,11 +43,26 @@ function ComponentCard({ icon: Icon, title, description, included, status, to })
       <div style={{ marginBottom: 14 }}>
         <Badge variant={included ? 'success' : 'neutral'}>{status}</Badge>
       </div>
+      {included && resumen && (
+        <details style={{ marginBottom: 14 }}>
+          <summary style={{ fontSize: 13, color: 'var(--nm-blue)', cursor: 'pointer' }}>Ver resumen</summary>
+          <div style={{ marginTop: 8 }}>{resumen}</div>
+        </details>
+      )}
       <Link to={to}>
-        <Button block variant={included ? 'outline' : 'primary'}>{included ? 'Ver / editar' : 'Configurar'}</Button>
+        <Button block variant={included ? 'outline' : 'primary'}>{included ? 'Editar' : 'Configurar'}</Button>
       </Link>
     </div>
   );
+}
+
+function horasPorTecnologiaDesdeBlocks(cotizacion) {
+  const mapa = {};
+  (cotizacion?.resultado?.detalle_calculo?.blocks || []).forEach((b) => {
+    const m = /^IMPLEMENTACION - (.+)$/.exec(b.titulo);
+    if (m) mapa[m[1]] = b.subtotalHoras;
+  });
+  return mapa;
 }
 
 export default function BomResumen() {
@@ -62,6 +77,7 @@ export default function BomResumen() {
   const [error, setError] = useState('');
   const [notas, setNotas] = useState('');
   const [guardandoNotas, setGuardandoNotas] = useState(false);
+  const [tarifas, setTarifas] = useState(null);
 
   function cargarDocumentos() {
     apiFetch(`/boms/${id}/documentos`, { token }).then(setDocumentos).catch(() => {});
@@ -72,6 +88,7 @@ export default function BomResumen() {
     apiFetch(`/boms/${id}/hardware-items`, { token }).then(setHardwareItems).catch(() => {});
     apiFetch(`/boms/${id}/cotizacion-implementacion`, { token }).then(setCotizacion).catch(() => {});
     apiFetch(`/boms/${id}/especificacion`, { token }).then(setEspecificacion).catch(() => {});
+    apiFetch('/catalogo-implementacion/tarifas', { token }).then(setTarifas).catch(() => {});
     cargarDocumentos();
   }, [id, token]);
 
@@ -107,6 +124,61 @@ export default function BomResumen() {
   const totalHardware = hardwareItems.reduce((acc, it) => acc + Number(it.subtotal), 0);
   const hayAlgunComponente = !!cotizacion || !!especificacion || hardwareItems.length > 0;
 
+  const resumenHardware = hardwareItems.length > 0 && (
+    <div className="table-wrap">
+      <table className="nm-table">
+        <thead><tr><th>Nombre</th><th>Marca</th><th>Cantidad</th><th>Precio unit.</th></tr></thead>
+        <tbody>
+          {hardwareItems.map((it) => (
+            <tr key={it.id}>
+              <td>{it.nombre}</td>
+              <td className="muted">{it.marca || '—'}</td>
+              <td>{it.cantidad}</td>
+              <td>${money(it.precio_unitario_snapshot)} {it.moneda || 'COP'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+
+  const tarifaActual = tarifas && cotizacion ? tarifas[cotizacion.condicion]?.[cotizacion.nivel_ingenieria] : null;
+  const horasPorTecnologia = horasPorTecnologiaDesdeBlocks(cotizacion);
+  const resumenImplementacion = cotizacion?.tecnologiasSeleccionadas?.length > 0 && (
+    <div className="table-wrap">
+      <table className="nm-table">
+        <thead><tr><th>Tecnología</th><th>Marca</th><th>Cantidad</th><th>{cotizacion.modo === 'netmask' ? 'Costo' : 'Horas'}</th></tr></thead>
+        <tbody>
+          {cotizacion.tecnologiasSeleccionadas.map((t) => {
+            const horas = horasPorTecnologia[t.tecnologia_nombre] || 0;
+            return (
+              <tr key={t.tecnologia_id}>
+                <td>{t.tecnologia_nombre}</td>
+                <td className="muted">{t.marca_nombre}</td>
+                <td>{t.factor_equipos}</td>
+                <td>{cotizacion.modo === 'netmask' && tarifaActual ? `$${money(horas * tarifaActual)} COP` : `${horas.toFixed(1)} h`}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+
+  const dwServicios = especificacion?.datos_wizard || {};
+  const resumenServicios = especificacion && (
+    <div className="table-wrap">
+      <table className="nm-table">
+        <tbody>
+          <tr><td style={{ fontWeight: 600 }}>Tipo de servicio</td><td>{especificacion.tipo_servicio_nombre}</td></tr>
+          <tr><td style={{ fontWeight: 600 }}>Modalidad</td><td>{dwServicios.modalidad || '—'}</td></tr>
+          <tr><td style={{ fontWeight: 600 }}>Cobertura</td><td>{dwServicios.cobertura || '—'}</td></tr>
+          <tr><td style={{ fontWeight: 600 }}>Vigencia</td><td>{dwServicios.vigencia ? `${dwServicios.vigencia} meses` : '—'}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  );
+
   return (
     <div className="content">
       <PageHeader
@@ -129,6 +201,7 @@ export default function BomResumen() {
           description="Cantidad, precio y SKU de los equipos del proyecto."
           included={hardwareItems.length > 0}
           status={hardwareItems.length > 0 ? `${hardwareItems.length} ítem(s) · $${money(totalHardware)} COP` : 'No incluido'}
+          resumen={resumenHardware}
         />
         <ComponentCard
           icon={IconWrench} title="Implementación" to={`/boms/${id}/implementacion`}
@@ -139,12 +212,14 @@ export default function BomResumen() {
               ? (ESTADO_ESPEC_LABEL[cotizacion.estado] || cotizacion.estado)
               : (cotizacion.modo === 'epsp' ? `${Number(cotizacion.resultado.total_dias_epsp).toFixed(2)} días EPSP` : `$${money(cotizacion.resultado.total_cop)} COP`))
             : 'No incluido'}
+          resumen={resumenImplementacion}
         />
         <ComponentCard
           icon={IconShield} title="Servicios Netmask" to={`/boms/${id}/servicios`}
           description="SLA, cobertura y alcance del servicio gestionado."
           included={!!especificacion}
           status={especificacion ? especificacion.estado : 'No incluido'}
+          resumen={resumenServicios}
         />
       </div>
 

@@ -9,6 +9,7 @@ catalogoHardwareRouter.use(authMiddleware);
 
 const hardwareSchema = z.object({
   nombre: z.string().min(1),
+  marca: z.string().optional(),
   sku: z.string().optional(),
   numeroParte: z.string().optional(),
   descripcion: z.string().optional(),

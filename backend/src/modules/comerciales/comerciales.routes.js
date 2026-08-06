@@ -9,7 +9,7 @@ comercialesRouter.use(authMiddleware);
 
 const comercialSchema = z.object({
   nombre: z.string().min(1),
-  sector: z.enum(['OT', 'IT']),
+  sector: z.enum(['OT', 'IT', 'IT/OT']),
 });
 
 comercialesRouter.get('/', requirePermiso('ver'), async (req, res, next) => {

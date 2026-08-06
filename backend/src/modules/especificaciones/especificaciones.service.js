@@ -2,7 +2,13 @@ import { query, pool } from '../../db/pool.js';
 import { HttpError } from '../../middlewares/errorHandler.js';
 
 export async function getEspecificacion(bomId) {
-  const { rows } = await query('SELECT * FROM especificaciones WHERE bom_id = $1', [bomId]);
+  const { rows } = await query(
+    `SELECT e.*, t.nombre AS tipo_servicio_nombre
+     FROM especificaciones e
+     JOIN catalogo_serv_tipos t ON t.id = e.tipo_servicio_id
+     WHERE e.bom_id = $1`,
+    [bomId]
+  );
   if (rows.length === 0) return null;
   const especificacion = rows[0];
   const { rows: historial } = await query(

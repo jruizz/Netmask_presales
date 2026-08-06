@@ -54,9 +54,11 @@ export async function getCotizacion(bomId) {
   const [{ rows: sedes }, { rows: tecnologiasSeleccionadas }, { rows: siteSurveySedes }, { rows: resultadoRows }, { rows: historial }] = await Promise.all([
     query('SELECT * FROM cotizaciones_impl_sedes WHERE cotizacion_id = $1 ORDER BY id', [cotizacion.id]),
     query(
-      `SELECT ts.tecnologia_id, ts.factor_equipos, t.nombre AS tecnologia_nombre
+      `SELECT ts.tecnologia_id, ts.factor_equipos, t.nombre AS tecnologia_nombre, m.nombre AS marca_nombre
        FROM cotizaciones_impl_tecnologias_seleccionadas ts
        JOIN catalogo_impl_tecnologias t ON t.id = ts.tecnologia_id
+       JOIN catalogo_impl_grupos g ON g.id = t.grupo_id
+       JOIN catalogo_impl_marcas m ON m.id = g.marca_id
        WHERE ts.cotizacion_id = $1`,
       [cotizacion.id]
     ),

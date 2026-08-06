@@ -7,6 +7,8 @@ import Button from '../components/Button.jsx';
 import Badge from '../components/Badge.jsx';
 import { IconTrash } from '../components/icons.jsx';
 
+const BADGE_POR_SECTOR = { OT: 'info', IT: 'success', 'IT/OT': 'warning' };
+
 export default function Comerciales() {
   const { token } = useAuth();
   const [comerciales, setComerciales] = useState([]);
@@ -77,6 +79,7 @@ export default function Comerciales() {
                         <select className="input" value={edicion.sector} onChange={(e) => setEdicion({ ...edicion, sector: e.target.value })}>
                           <option value="OT">OT</option>
                           <option value="IT">IT</option>
+                          <option value="IT/OT">IT/OT</option>
                         </select>
                       </td>
                       <td className="row">
@@ -87,7 +90,7 @@ export default function Comerciales() {
                   ) : (
                     <>
                       <td style={{ fontWeight: 600 }}>{c.nombre}</td>
-                      <td><Badge variant={c.sector === 'OT' ? 'info' : 'success'}>{c.sector}</Badge></td>
+                      <td><Badge variant={BADGE_POR_SECTOR[c.sector] || 'neutral'}>{c.sector}</Badge></td>
                       <td className="row">
                         <Button size="sm" variant="outline" onClick={() => empezarEdicion(c)}>Editar</Button>
                         <Button size="sm" variant="ghost" onClick={() => desactivar(c.id)} style={{ color: 'var(--nm-danger)' }}>
@@ -115,6 +118,7 @@ export default function Comerciales() {
             <select className="input" value={nuevo.sector} onChange={(e) => setNuevo({ ...nuevo, sector: e.target.value })}>
               <option value="OT">OT</option>
               <option value="IT">IT</option>
+              <option value="IT/OT">IT/OT</option>
             </select>
           </div>
           <Button type="submit">Agregar</Button>

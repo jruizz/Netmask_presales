@@ -15,7 +15,7 @@ async function cargarContextoBom(bomId, user) {
   const bom = await bomsService.getBom(bomId, user);
   const { rows: clienteRows } = await query('SELECT * FROM clientes WHERE id = $1', [bom.cliente_id]);
   const { rows: hardwareItems } = await query(
-    `SELECT bhi.*, ch.nombre, ch.sku, ch.descripcion, ch.moneda, bhi.cantidad * bhi.precio_unitario_snapshot AS subtotal
+    `SELECT bhi.*, ch.nombre, ch.marca, ch.sku, ch.descripcion, ch.moneda, bhi.cantidad * bhi.precio_unitario_snapshot AS subtotal
      FROM bom_hardware_items bhi JOIN catalogo_hardware ch ON ch.id = bhi.hardware_id
      WHERE bhi.bom_id = $1 ORDER BY bhi.id`,
     [bomId]

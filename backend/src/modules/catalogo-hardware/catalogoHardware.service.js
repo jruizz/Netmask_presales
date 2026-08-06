@@ -5,7 +5,7 @@ export async function buscarHardware(q) {
   if (q) {
     const { rows } = await query(
       `SELECT * FROM catalogo_hardware
-       WHERE activo = true AND (nombre ILIKE $1 OR sku ILIKE $1 OR numero_parte ILIKE $1)
+       WHERE activo = true AND (nombre ILIKE $1 OR marca ILIKE $1 OR sku ILIKE $1 OR numero_parte ILIKE $1)
        ORDER BY nombre ASC LIMIT 50`,
       [`%${q}%`]
     );
@@ -18,13 +18,13 @@ export async function buscarHardware(q) {
 }
 
 export async function crearHardware(data, creadoPorId) {
-  const { nombre, sku, numeroParte, descripcion, precio, moneda, tecnologiaImplSugeridaId } = data;
+  const { nombre, marca, sku, numeroParte, descripcion, precio, moneda, tecnologiaImplSugeridaId } = data;
   try {
     const { rows } = await query(
-      `INSERT INTO catalogo_hardware (nombre, sku, numero_parte, descripcion, precio, moneda, tecnologia_impl_sugerida_id, creado_por)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO catalogo_hardware (nombre, marca, sku, numero_parte, descripcion, precio, moneda, tecnologia_impl_sugerida_id, creado_por)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
-      [nombre, sku || null, numeroParte || null, descripcion || null, precio, moneda || 'COP', tecnologiaImplSugeridaId || null, creadoPorId]
+      [nombre, marca || null, sku || null, numeroParte || null, descripcion || null, precio, moneda || 'COP', tecnologiaImplSugeridaId || null, creadoPorId]
     );
     return rows[0];
   } catch (err) {
@@ -34,13 +34,13 @@ export async function crearHardware(data, creadoPorId) {
 }
 
 export async function actualizarHardware(id, data) {
-  const { nombre, sku, numeroParte, descripcion, precio, moneda, tecnologiaImplSugeridaId } = data;
+  const { nombre, marca, sku, numeroParte, descripcion, precio, moneda, tecnologiaImplSugeridaId } = data;
   try {
     const { rows } = await query(
-      `UPDATE catalogo_hardware SET nombre = $1, sku = $2, numero_parte = $3, descripcion = $4,
-         precio = $5, moneda = $6, tecnologia_impl_sugerida_id = $7
-       WHERE id = $8 RETURNING *`,
-      [nombre, sku || null, numeroParte || null, descripcion || null, precio, moneda || 'COP', tecnologiaImplSugeridaId || null, id]
+      `UPDATE catalogo_hardware SET nombre = $1, marca = $2, sku = $3, numero_parte = $4, descripcion = $5,
+         precio = $6, moneda = $7, tecnologia_impl_sugerida_id = $8
+       WHERE id = $9 RETURNING *`,
+      [nombre, marca || null, sku || null, numeroParte || null, descripcion || null, precio, moneda || 'COP', tecnologiaImplSugeridaId || null, id]
     );
     if (rows.length === 0) throw new HttpError(404, 'Ítem de hardware no encontrado');
     return rows[0];

@@ -6,6 +6,43 @@ import Card from '../components/Card.jsx';
 import Button from '../components/Button.jsx';
 import Badge from '../components/Badge.jsx';
 
+// Componente de nivel superior (no anidado dentro de Usuarios): si se define
+// adentro, React lo trata como un tipo de componente nuevo en cada render y
+// remonta los inputs, perdiendo el foco despues de cada tecla.
+function FormularioEdicion({ form, setForm, roles, guardar, cancelar, guardando }) {
+  return (
+    <tr>
+      <td colSpan={6} style={{ padding: '12px 0' }}>
+        <form onSubmit={guardar} className="form-grid" style={{ alignItems: 'end' }}>
+          <div className="field">
+            <label>Nombre</label>
+            <input className="input" required value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} />
+          </div>
+          <div className="field">
+            <label>Correo</label>
+            <input className="input" required type="email" value={form.correo} onChange={(e) => setForm({ ...form, correo: e.target.value })} />
+          </div>
+          <div className="field">
+            <label>Rol</label>
+            <select className="input" required value={form.rolClave} onChange={(e) => setForm({ ...form, rolClave: e.target.value })}>
+              {roles.map((r) => <option key={r.id} value={r.clave}>{r.nombre_visible}</option>)}
+            </select>
+          </div>
+          <div className="field">
+            <label>Nueva contraseña (opcional)</label>
+            <input className="input" type="password" minLength={8} placeholder="Dejar en blanco para no cambiarla"
+              value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+          </div>
+          <div className="row" style={{ gridColumn: 'span 1' }}>
+            <Button type="submit" disabled={guardando}>{guardando ? 'Guardando...' : 'Guardar'}</Button>
+            <Button variant="outline" onClick={cancelar}>Cancelar</Button>
+          </div>
+        </form>
+      </td>
+    </tr>
+  );
+}
+
 export default function Usuarios() {
   const { token } = useAuth();
   const [usuarios, setUsuarios] = useState([]);
@@ -14,6 +51,9 @@ export default function Usuarios() {
   const [nuevo, setNuevo] = useState({ nombre: '', correo: '', password: '', rolClave: '' });
   const [error, setError] = useState('');
   const [guardandoRol, setGuardandoRol] = useState('');
+  const [editandoId, setEditandoId] = useState(null);
+  const [form, setForm] = useState(null);
+  const [guardando, setGuardando] = useState(false);
 
   function cargarTodo() {
     apiFetch('/usuarios', { token }).then(setUsuarios).catch((err) => setError(err.message));
@@ -41,6 +81,32 @@ export default function Usuarios() {
       cargarTodo();
     } catch (err) {
       setError(err.message);
+    }
+  }
+
+  function empezarEdicion(u) {
+    setEditandoId(u.id);
+    setForm({ nombre: u.nombre, correo: u.correo, rolClave: u.rol, password: '' });
+  }
+  function cancelarEdicion() {
+    setEditandoId(null);
+    setForm(null);
+  }
+
+  async function guardarEdicion(e) {
+    e.preventDefault();
+    setError('');
+    setGuardando(true);
+    try {
+      const body = { nombre: form.nombre, correo: form.correo, rolClave: form.rolClave };
+      if (form.password) body.password = form.password;
+      await apiFetch(`/usuarios/${editandoId}`, { method: 'PUT', token, body });
+      cancelarEdicion();
+      cargarTodo();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGuardando(false);
     }
   }
 
@@ -72,18 +138,25 @@ export default function Usuarios() {
             </thead>
             <tbody>
               {usuarios.map((u) => (
-                <tr key={u.id}>
-                  <td style={{ fontWeight: 600 }}>{u.nombre}</td>
-                  <td className="muted">{u.correo}</td>
-                  <td>{u.rol}</td>
-                  <td><Badge variant={u.activo ? 'success' : 'neutral'}>{u.activo ? 'Sí' : 'No'}</Badge></td>
-                  <td className="muted">{u.ultimo_login ? new Date(u.ultimo_login).toLocaleString('es-CO') : '—'}</td>
-                  <td>
-                    <Button variant="outline" size="sm" onClick={() => cambiarEstado(u.id, !u.activo)}>
-                      {u.activo ? 'Desactivar' : 'Activar'}
-                    </Button>
-                  </td>
-                </tr>
+                editandoId === u.id ? (
+                  <FormularioEdicion key={u.id} form={form} setForm={setForm} roles={roles} guardar={guardarEdicion} cancelar={cancelarEdicion} guardando={guardando} />
+                ) : (
+                  <tr key={u.id}>
+                    <td style={{ fontWeight: 600 }}>{u.nombre}</td>
+                    <td className="muted">{u.correo}</td>
+                    <td>{u.rol}</td>
+                    <td><Badge variant={u.activo ? 'success' : 'neutral'}>{u.activo ? 'Sí' : 'No'}</Badge></td>
+                    <td className="muted">{u.ultimo_login ? new Date(u.ultimo_login).toLocaleString('es-CO') : '—'}</td>
+                    <td>
+                      <div className="row">
+                        <Button variant="outline" size="sm" onClick={() => empezarEdicion(u)}>Editar</Button>
+                        <Button variant="outline" size="sm" onClick={() => cambiarEstado(u.id, !u.activo)}>
+                          {u.activo ? 'Desactivar' : 'Activar'}
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                )
               ))}
             </tbody>
           </table>

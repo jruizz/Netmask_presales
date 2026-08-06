@@ -16,6 +16,13 @@ const crearSchema = z.object({
 
 const estadoSchema = z.object({ activo: z.boolean() });
 
+const actualizarSchema = z.object({
+  nombre: z.string().min(1),
+  correo: z.string().email(),
+  rolClave: z.string().min(1),
+  password: z.string().min(8).optional(),
+});
+
 usuariosRouter.get('/', async (req, res, next) => {
   try {
     res.json(await usuariosService.listUsuarios());
@@ -28,6 +35,15 @@ usuariosRouter.post('/', async (req, res, next) => {
   try {
     const data = crearSchema.parse(req.body);
     res.status(201).json(await usuariosService.crearUsuario(data));
+  } catch (err) {
+    next(err);
+  }
+});
+
+usuariosRouter.put('/:id', async (req, res, next) => {
+  try {
+    const data = actualizarSchema.parse(req.body);
+    res.json(await usuariosService.actualizarUsuario(req.params.id, data));
   } catch (err) {
     next(err);
   }

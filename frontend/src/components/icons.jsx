@@ -21,6 +21,9 @@ export const IconPlus = (p) => (
 export const IconChevronLeft = (p) => (
   <svg {...base} {...p}><polyline points="14 18 8 12 14 6" /></svg>
 );
+export const IconChevronRight = (p) => (
+  <svg {...base} {...p}><polyline points="10 6 16 12 10 18" /></svg>
+);
 export const IconDownload = (p) => (
   <svg {...base} {...p}><path d="M12 3v12" /><path d="M7 10l5 5 5-5" /><path d="M4 19h16" /></svg>
 );

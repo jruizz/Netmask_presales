@@ -47,6 +47,8 @@ export default function BomImplementacion() {
   const [sedes, setSedes] = useState([nuevaSede('Sede 1')]);
   const [techState, setTechState] = useState({});
   const [expandidas, setExpandidas] = useState({});
+  const [listo, setListo] = useState(false);
+  const [estadoGuardado, setEstadoGuardado] = useState('');
 
   useEffect(() => {
     async function cargar() {
@@ -92,10 +94,23 @@ export default function BomImplementacion() {
         setTechState(inicial);
       } catch (err) {
         setError(err.message);
+      } finally {
+        setListo(true);
       }
     }
     cargar();
   }, [id, token]);
+
+  // Recalculo en vivo: cualquier cambio en los campos del wizard dispara un
+  // guardado/recalculo automatico (con debounce) en vez de depender de que el
+  // usuario recuerde pulsar "Calcular y guardar" -- ver troubleshooting agosto 2026.
+  useEffect(() => {
+    if (!listo || !editable) return;
+    setEstadoGuardado('pendiente');
+    const handle = setTimeout(() => { guardarYCalcular(); }, 700);
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listo, modo, nivelIngenieria, esAliado, numeroPlantas, trm, requiereAprobacion, JSON.stringify(sedes), JSON.stringify(techState)]);
 
   function toggleTech(tecId) {
     setTechState((prev) => ({
@@ -142,8 +157,10 @@ export default function BomImplementacion() {
       const res = await apiFetch(`/boms/${id}/cotizacion-implementacion`, { method: 'PUT', token, body });
       setResultado(res.resultado);
       setCotizacion(res);
+      setEstadoGuardado('guardado');
     } catch (err) {
       setError(err.message);
+      setEstadoGuardado('error');
     } finally {
       setGuardando(false);
     }
@@ -160,8 +177,13 @@ export default function BomImplementacion() {
     }
   }
 
-  const gruposTecnologias = tecnologias.reduce((acc, t) => {
-    (acc[t.grupo_nombre] ||= []).push(t);
+  // Anidado marca -> grupo -> tecnologias, igual a como se organizan en la
+  // Biblioteca de Implementacion -- aqui es solo visualizacion, lo unico
+  // editable sigue siendo el checkbox y la cantidad de equipos por tecnologia.
+  const marcasTecnologias = tecnologias.reduce((acc, t) => {
+    const marca = t.marca_nombre || 'Otras';
+    (acc[marca] ||= {});
+    (acc[marca][t.grupo_nombre] ||= []).push(t);
     return acc;
   }, {});
 
@@ -290,54 +312,70 @@ export default function BomImplementacion() {
       </Card>
 
       <Card title="Tecnologías" subtitle="Bolsa de Horas y Site Survey ahora se configuran desde Servicios Netmask." style={{ marginBottom: 16 }}>
-        {Object.entries(gruposTecnologias).map(([grupo, techs]) => (
-          <div key={grupo} style={{ marginBottom: 14 }}>
-            <div className="sidebar-section-label" style={{ color: 'var(--nm-text-muted)', padding: '0 0 6px' }}>{grupo}</div>
-            {techs.map((t) => {
-              const st = techState[t.id];
-              const abierta = !!expandidas[t.id];
-              return (
-                <div key={t.id} style={{ padding: '5px 0' }}>
-                  <div className="row">
-                    <input type="checkbox" disabled={!editable} checked={!!st?.checked} onChange={() => toggleTech(t.id)} />
-                    <span style={{ flex: 1, fontSize: 13.5 }}>{t.nombre}</span>
-                    {st?.checked && (
-                      <input className="input" type="number" min="1" step="1" disabled={!editable} value={st.factor}
-                        onChange={(e) => setTechFactor(t.id, Number(e.target.value))}
-                        title="Cantidad de equipos" style={{ width: 76 }} />
-                    )}
-                    <button type="button" onClick={() => toggleExpandida(t.id)}
-                      style={{ background: 'none', border: 'none', color: 'var(--nm-blue)', cursor: 'pointer', fontSize: 12, padding: '0 4px' }}>
-                      {abierta ? '▾ ocultar' : '▸ ver actividades'}
-                    </button>
-                  </div>
-                  {abierta && (
-                    <div className="table-wrap" style={{ marginTop: 6, marginBottom: 6 }}>
-                      <table className="nm-table">
-                        <thead><tr><th>Actividad</th><th>Horas</th><th>Modalidad</th></tr></thead>
-                        <tbody>
-                          {(t.actividades || []).map((a) => (
-                            <tr key={a.id}>
-                              <td className="text-sm">{a.texto}</td>
-                              <td className="text-sm">{a.horas}</td>
-                              <td className="text-sm muted">{a.modo === 'en_sitio' ? 'En sitio' : 'Remota'}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
+        {Object.entries(marcasTecnologias).map(([marca, grupos]) => (
+          <details key={marca} open style={{ marginBottom: 14 }}>
+            <summary style={{ fontWeight: 700, fontSize: 14, cursor: 'pointer', padding: '4px 0', color: 'var(--nm-navy)' }}>{marca}</summary>
+            <div style={{ paddingLeft: 12 }}>
+              {Object.entries(grupos).map(([grupo, techs]) => (
+                <div key={grupo} style={{ marginBottom: 14 }}>
+                  <div className="sidebar-section-label" style={{ color: 'var(--nm-text-muted)', padding: '0 0 6px' }}>{grupo}</div>
+                  {techs.map((t) => {
+                    const st = techState[t.id];
+                    const abierta = !!expandidas[t.id];
+                    return (
+                      <div key={t.id} style={{ padding: '5px 0' }}>
+                        <div className="row">
+                          <input type="checkbox" disabled={!editable} checked={!!st?.checked} onChange={() => toggleTech(t.id)} />
+                          <span style={{ flex: 1, fontSize: 13.5 }}>{t.nombre}</span>
+                          {st?.checked && (
+                            <input className="input" type="number" min="1" step="1" disabled={!editable} value={st.factor}
+                              onChange={(e) => setTechFactor(t.id, Number(e.target.value))}
+                              title="Cantidad de equipos" style={{ width: 76 }} />
+                          )}
+                          <button type="button" onClick={() => toggleExpandida(t.id)}
+                            style={{ background: 'none', border: 'none', color: 'var(--nm-blue)', cursor: 'pointer', fontSize: 12, padding: '0 4px' }}>
+                            {abierta ? '▾ ocultar' : '▸ ver actividades'}
+                          </button>
+                        </div>
+                        {abierta && (
+                          <div className="table-wrap" style={{ marginTop: 6, marginBottom: 6 }}>
+                            <table className="nm-table">
+                              <thead><tr><th>Actividad</th><th>Horas</th><th>Modalidad</th></tr></thead>
+                              <tbody>
+                                {(t.actividades || []).map((a) => (
+                                  <tr key={a.id}>
+                                    <td className="text-sm">{a.texto}</td>
+                                    <td className="text-sm">{a.horas}</td>
+                                    <td className="text-sm muted">{a.modo === 'en_sitio' ? 'En sitio' : 'Remota'}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          </details>
         ))}
       </Card>
 
       {editable && (
-        <Button onClick={guardarYCalcular} disabled={guardando} style={{ marginBottom: 24 }}>
-          {guardando ? 'Calculando...' : 'Calcular y guardar'}
-        </Button>
+        <div className="row" style={{ marginBottom: 24, alignItems: 'center' }}>
+          <Button onClick={guardarYCalcular} disabled={guardando} variant="outline">
+            {guardando ? 'Calculando...' : 'Recalcular ahora'}
+          </Button>
+          <span className="text-sm muted">
+            {guardando ? 'Calculando...'
+              : estadoGuardado === 'pendiente' ? 'Cambios sin guardar — recalculando en unos segundos...'
+              : estadoGuardado === 'error' ? 'No se pudo guardar el último cambio'
+              : estadoGuardado === 'guardado' ? 'Cálculo actualizado automáticamente'
+              : ''}
+          </span>
+        </div>
       )}
 
       {resultado && (

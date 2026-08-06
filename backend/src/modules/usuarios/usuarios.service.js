@@ -29,6 +29,34 @@ export async function crearUsuario({ nombre, correo, password, rolClave }) {
   }
 }
 
+export async function actualizarUsuario(id, { nombre, correo, rolClave, password }) {
+  const { rows: rolRows } = await query('SELECT id FROM roles WHERE clave = $1', [rolClave]);
+  if (rolRows.length === 0) throw new HttpError(400, `Rol invalido: ${rolClave}`);
+
+  try {
+    let rows;
+    if (password) {
+      const passwordHash = await bcrypt.hash(password, 10);
+      ({ rows } = await query(
+        `UPDATE usuarios SET nombre = $1, correo = $2, rol_id = $3, password_hash = $4 WHERE id = $5
+         RETURNING id, nombre, correo, activo`,
+        [nombre, correo, rolRows[0].id, passwordHash, id]
+      ));
+    } else {
+      ({ rows } = await query(
+        `UPDATE usuarios SET nombre = $1, correo = $2, rol_id = $3 WHERE id = $4
+         RETURNING id, nombre, correo, activo`,
+        [nombre, correo, rolRows[0].id, id]
+      ));
+    }
+    if (rows.length === 0) throw new HttpError(404, 'Usuario no encontrado');
+    return rows[0];
+  } catch (err) {
+    if (err.code === '23505') throw new HttpError(409, `Ya existe un usuario con el correo "${correo}"`);
+    throw err;
+  }
+}
+
 export async function actualizarEstadoUsuario(id, activo) {
   const { rows } = await query(
     'UPDATE usuarios SET activo = $1 WHERE id = $2 RETURNING id, nombre, correo, activo',

@@ -12,6 +12,7 @@ import Auditoria from './pages/Auditoria.jsx';
 import Usuarios from './pages/Usuarios.jsx';
 import Comerciales from './pages/Comerciales.jsx';
 import CatalogoImplementacion from './pages/CatalogoImplementacion.jsx';
+import CatalogoHardware from './pages/CatalogoHardware.jsx';
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
         <Route path="/usuarios" element={<Usuarios />} />
         <Route path="/comerciales" element={<Comerciales />} />
         <Route path="/catalogo-implementacion" element={<CatalogoImplementacion />} />
+        <Route path="/catalogo-hardware" element={<CatalogoHardware />} />
       </Route>
     </Routes>
   );

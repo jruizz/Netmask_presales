@@ -1,7 +1,7 @@
 import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext.jsx';
 import logo from '../assets/logo.png';
-import { IconDashboard, IconLibrary, IconAudit, IconUsers, IconLogout, IconBriefcase, IconWrench } from './icons.jsx';
+import { IconDashboard, IconLibrary, IconAudit, IconUsers, IconLogout, IconBriefcase, IconWrench, IconBox } from './icons.jsx';
 
 const ROLES_VISIBILIDAD_AMPLIADA = ['superadmin', 'gerencia'];
 const ROLES_ADMINISTRAN_CATALOGOS = ['lider_tecnico', 'superadmin'];
@@ -38,6 +38,7 @@ export default function AppShell() {
           <NavLink to="/documentos" icon={IconLibrary}>Biblioteca</NavLink>
           {puedeVerTodos && <NavLink to="/auditoria" icon={IconAudit}>Auditoría</NavLink>}
           {administraCatalogos && <NavLink to="/comerciales" icon={IconBriefcase}>Comerciales</NavLink>}
+          {administraCatalogos && <NavLink to="/catalogo-hardware" icon={IconBox}>Biblioteca Hardware</NavLink>}
           {administraCatalogos && <NavLink to="/catalogo-implementacion" icon={IconWrench}>Biblioteca Implementación</NavLink>}
           {me?.rol === 'superadmin' && <NavLink to="/usuarios" icon={IconUsers}>Usuarios y Roles</NavLink>}
         </nav>

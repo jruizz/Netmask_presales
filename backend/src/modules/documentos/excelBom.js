@@ -1,7 +1,8 @@
 import ExcelJS from 'exceljs';
-import { estiloEncabezado, escribirDetalleCotizacion } from './excelCotizacion.js';
-
-const AZUL_CLARO = 'FF0094CE';
+import {
+  estiloEncabezado, estiloTotal, conBorde, bordePorFila,
+  escribirEncabezadoProyecto, escribirViaticosPorSede, escribirDetalleCotizacion,
+} from './excelCotizacion.js';
 
 // Agrupa subtotales de hardware por moneda -- nunca se suma COP con USD como si
 // fueran lo mismo (ver troubleshooting agosto 2026: el selector de moneda del
@@ -18,122 +19,96 @@ function agruparPorMoneda(hardwareItems) {
 export async function generarExcelBom({ bom, cliente, hardwareItems, cotizacion, especificacion, tipoServicioNombre }) {
   const wb = new ExcelJS.Workbook();
 
-  const resumen = wb.addWorksheet('Resumen');
-  resumen.columns = [{ key: 'a', width: 40 }, { key: 'b', width: 30 }];
-  resumen.mergeCells('A1:B1');
-  resumen.getCell('A1').value = `BOM — ${bom.nombre}`;
-  estiloEncabezado(resumen.getCell('A1'));
-  resumen.getRow(1).height = 22;
-  resumen.getCell('A2').value = 'Cliente';
-  resumen.getCell('B2').value = cliente.nombre_cliente;
-  resumen.getCell('A3').value = 'Account Manager';
-  resumen.getCell('B3').value = bom.comercial_nombre || '—';
-  resumen.getCell('A4').value = 'Fecha';
-  resumen.getCell('B4').value = new Date().toLocaleDateString('es-CO');
-
-  let r = 6;
-  const totalesPorMoneda = agruparPorMoneda(hardwareItems);
-  if (hardwareItems.length) {
-    resumen.getCell(`A${r}`).value = 'Hardware (subtotal)';
-    resumen.getCell(`A${r}`).font = { bold: true };
-    r++;
-    Object.entries(totalesPorMoneda).forEach(([moneda, total]) => {
-      resumen.getCell(`A${r}`).value = `  Subtotal ${moneda}`;
-      resumen.getCell(`B${r}`).value = total;
-      resumen.getCell(`B${r}`).numFmt = '#,##0.00';
-      r++;
-    });
-  } else {
-    resumen.getCell(`A${r}`).value = 'Hardware';
-    resumen.getCell(`B${r}`).value = 'No incluido en este BOM';
-    r++;
-  }
-
-  let totalGeneralCop = totalesPorMoneda.COP || 0;
-  if (cotizacion) {
-    if (cotizacion.modo === 'netmask') {
-      resumen.getCell(`A${r}`).value = 'Implementación (costo ingeniería + viáticos, COP)';
-      resumen.getCell(`B${r}`).value = Number(cotizacion.resultado.total_cop);
-      resumen.getCell(`B${r}`).numFmt = '#,##0';
-      totalGeneralCop += Number(cotizacion.resultado.total_cop);
-    } else {
-      resumen.getCell(`A${r}`).value = 'Implementación (modo EPSP — sin valor monetario, ver hoja Implementación)';
-      resumen.getCell(`B${r}`).value = `${Number(cotizacion.resultado.total_dias_epsp).toFixed(2)} días EPSP`;
-    }
-  } else {
-    resumen.getCell(`A${r}`).value = 'Implementación';
-    resumen.getCell(`B${r}`).value = 'No incluida en este BOM';
-  }
-  r++;
-
-  resumen.getCell(`A${r}`).value = 'Servicio Netmask';
-  resumen.getCell(`B${r}`).value = especificacion
-    ? `${tipoServicioNombre} (sin valor tarifado — ver Propuesta Técnica / especificación)`
-    : 'No incluido en este BOM';
-  r += 2;
-
-  resumen.getCell(`A${r}`).value = cotizacion && cotizacion.modo === 'epsp'
-    ? 'TOTAL GENERAL COP (no incluye Implementación en días EPSP; ver subtotales de otras monedas arriba)'
-    : 'TOTAL GENERAL (COP)';
-  resumen.getCell(`B${r}`).value = totalGeneralCop;
-  resumen.getCell(`B${r}`).numFmt = '#,##0';
-  resumen.getCell(`A${r}`).font = { bold: true };
-  resumen.getCell(`B${r}`).font = { bold: true, color: { argb: AZUL_CLARO }, size: 13 };
-  r += 2;
-
-  if (bom.notas) {
-    resumen.getCell(`A${r}`).value = 'Comentarios';
-    estiloEncabezado(resumen.getCell(`A${r}`));
-    resumen.mergeCells(r, 1, r, 2);
-    r++;
-    String(bom.notas).split('\n').forEach((linea) => {
-      resumen.getCell(`A${r}`).value = linea;
-      resumen.mergeCells(r, 1, r, 2);
-      resumen.getRow(r).alignment = { wrapText: true };
-      r++;
-    });
-  }
-
   if (hardwareItems.length) {
     const hw = wb.addWorksheet('Hardware');
     hw.columns = [
-      { header: 'Item', key: 'item', width: 8 },
-      { header: 'Referencia', key: 'nombre', width: 30 },
-      { header: 'Descripción', key: 'descripcion', width: 45 },
-      { header: 'Cantidad', key: 'cantidad', width: 12 },
-      { header: 'Costo unitario', key: 'precio', width: 16 },
-      { header: 'Moneda', key: 'moneda', width: 10 },
-      { header: 'Total', key: 'subtotal', width: 16 },
+      { key: 'item', width: 8 }, { key: 'nombre', width: 30 }, { key: 'descripcion', width: 45 },
+      { key: 'cantidad', width: 12 }, { key: 'precio', width: 16 }, { key: 'moneda', width: 10 }, { key: 'subtotal', width: 16 },
     ];
-    hw.getRow(1).eachCell((cell) => estiloEncabezado(cell));
-    hardwareItems.forEach((it, i) => {
-      hw.addRow({
-        item: i + 1, nombre: it.nombre, descripcion: it.descripcion || '—', cantidad: Number(it.cantidad),
-        precio: Number(it.precio_unitario_snapshot), moneda: it.moneda || 'COP', subtotal: Number(it.subtotal),
-      });
-    });
-    hw.getColumn('precio').numFmt = '#,##0.00';
-    hw.getColumn('subtotal').numFmt = '#,##0.00';
 
-    let filaTotal = hardwareItems.length + 2;
-    Object.entries(totalesPorMoneda).forEach(([moneda, total]) => {
-      const totalRow = hw.getRow(filaTotal);
-      totalRow.getCell(2).value = `TOTAL ${moneda}`;
-      totalRow.getCell(7).value = total;
-      totalRow.getCell(7).numFmt = '#,##0.00';
-      totalRow.font = { bold: true };
-      filaTotal++;
+    let r = escribirEncabezadoProyecto(hw, 1, { titulo: `BOM — ${bom.nombre}`, cliente, bom, colFin: 7 });
+
+    const headerRow = hw.getRow(r);
+    ['Item', 'Referencia', 'Descripción', 'Cantidad', 'Costo unitario', 'Moneda', 'Total'].forEach((h, i) => {
+      const cell = headerRow.getCell(i + 1);
+      cell.value = h;
+      estiloEncabezado(cell);
     });
+    r++;
+
+    hardwareItems.forEach((it, i) => {
+      const row = hw.getRow(r);
+      row.getCell(1).value = i + 1;
+      row.getCell(2).value = it.nombre;
+      row.getCell(3).value = it.descripcion || '—';
+      row.getCell(4).value = Number(it.cantidad);
+      row.getCell(5).value = Number(it.precio_unitario_snapshot);
+      row.getCell(5).numFmt = '#,##0.00';
+      row.getCell(6).value = it.moneda || 'COP';
+      row.getCell(7).value = Number(it.subtotal);
+      row.getCell(7).numFmt = '#,##0.00';
+      bordePorFila(row, 1, 7);
+      r++;
+    });
+
+    const totalesPorMoneda = agruparPorMoneda(hardwareItems);
+    Object.entries(totalesPorMoneda).forEach(([moneda, total]) => {
+      const row = hw.getRow(r);
+      row.getCell(2).value = `TOTAL ${moneda}`;
+      row.getCell(7).value = total;
+      row.getCell(7).numFmt = '#,##0.00';
+      bordePorFila(row, 1, 7);
+      for (let c = 1; c <= 7; c++) estiloTotal(row.getCell(c));
+      r++;
+    });
+    r++;
+
+    if (bom.notas) {
+      hw.getCell(r, 1).value = 'Comentarios';
+      estiloEncabezado(hw.getCell(r, 1));
+      hw.mergeCells(r, 1, r, 7);
+      r++;
+      String(bom.notas).split('\n').forEach((linea) => {
+        hw.getCell(r, 1).value = linea;
+        hw.mergeCells(r, 1, r, 7);
+        hw.getRow(r).alignment = { wrapText: true };
+        bordePorFila(hw.getRow(r), 1, 7);
+        r++;
+      });
+    }
   }
 
   if (cotizacion) {
     const wsImpl = wb.addWorksheet('Implementación');
     wsImpl.columns = [
-      { key: 'texto', width: 55 }, { key: 'cantidad', width: 12 }, { key: 'horas', width: 10 },
+      { key: 'texto', width: 55 }, { key: 'cantidad', width: 14 }, { key: 'horas', width: 12 },
       { key: 'totalHoras', width: 14 }, { key: 'modo', width: 12 }, { key: 'costoHora', width: 16 },
+      { key: 'c7', width: 14 }, { key: 'c8', width: 14 }, { key: 'c9', width: 14 }, { key: 'c10', width: 14 }, { key: 'c11', width: 10 },
     ];
+
+    let r = escribirEncabezadoProyecto(wsImpl, 1, { titulo: `Implementación — ${bom.nombre}`, cliente, bom, colFin: 11 });
+
+    if (cotizacion.resultado.detalle_calculo.viaticosPorSede?.length) {
+      r = escribirViaticosPorSede(wsImpl, r, cotizacion.resultado.detalle_calculo.viaticosPorSede);
+    }
+
     const tarifa = cotizacion.modo === 'netmask' ? Number(cotizacion.resultado.detalle_calculo.tarifa) : undefined;
-    escribirDetalleCotizacion(wsImpl, 1, cotizacion, { tarifa });
+    escribirDetalleCotizacion(wsImpl, r, cotizacion, { tarifa });
+  }
+
+  // BOM con solo Servicios Netmask (sin Hardware ni Implementacion): ninguna de
+  // las hojas de arriba se crea -- se deja una hoja minima para que el archivo
+  // nunca quede vacio (ExcelJS no permite un workbook sin hojas).
+  if (wb.worksheets.length === 0) {
+    const ws = wb.addWorksheet('BOM');
+    ws.columns = [{ key: 'a', width: 30 }, { key: 'b', width: 40 }];
+    let r = escribirEncabezadoProyecto(ws, 1, { titulo: `BOM — ${bom.nombre}`, cliente, bom, colFin: 2 });
+    ws.getCell(r, 1).value = 'Servicio Netmask';
+    ws.getCell(r, 1).font = { bold: true };
+    ws.getCell(r, 2).value = especificacion
+      ? `${tipoServicioNombre} (sin valor tarifado — ver Propuesta Técnica / especificación)`
+      : 'No incluido en este BOM';
+    bordePorFila(ws.getRow(r), 1, 2);
   }
 
   return wb.xlsx.writeBuffer();

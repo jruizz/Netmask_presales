@@ -15,9 +15,38 @@ const actividadSchema = z.object({
 });
 
 const tecnologiaSchema = z.object({
+  marcaId: z.number().int().positive(),
   grupoNombre: z.string().min(1),
   nombre: z.string().min(1),
   actividades: z.array(actividadSchema).min(1),
+});
+
+const marcaSchema = z.object({ nombre: z.string().min(1) });
+
+catalogoImplementacionRouter.get('/marcas', requirePermiso('ver'), async (req, res, next) => {
+  try {
+    res.json(await catalogoService.listMarcas());
+  } catch (err) {
+    next(err);
+  }
+});
+
+catalogoImplementacionRouter.post('/marcas', requirePermiso('administrar_catalogos'), async (req, res, next) => {
+  try {
+    const data = marcaSchema.parse(req.body);
+    res.status(201).json(await catalogoService.crearMarca(data));
+  } catch (err) {
+    next(err);
+  }
+});
+
+catalogoImplementacionRouter.delete('/marcas/:id', requirePermiso('administrar_catalogos'), async (req, res, next) => {
+  try {
+    await catalogoService.eliminarMarca(req.params.id);
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
 });
 
 catalogoImplementacionRouter.get('/tecnologias', requirePermiso('ver'), async (req, res, next) => {

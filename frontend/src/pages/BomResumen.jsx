@@ -50,7 +50,7 @@ function ComponentCard({ icon: Icon, title, description, included, status, to, r
         </details>
       )}
       <Link to={to}>
-        <Button block variant={included ? 'outline' : 'primary'}>{included ? 'Ver / editar' : 'Configurar'}</Button>
+        <Button block variant={included ? 'outline' : 'primary'}>{included ? 'Editar' : 'Configurar'}</Button>
       </Link>
     </div>
   );

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext.jsx';
 import { apiFetch } from '../services/api.js';
 import PageHeader from '../components/PageHeader.jsx';
@@ -35,6 +35,7 @@ function inferirTipoCampo(clave) {
 
 export default function BomServicios() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { token, me } = useAuth();
 
   const [tipos, setTipos] = useState([]);
@@ -147,11 +148,18 @@ export default function BomServicios() {
         method: 'PUT', token, body: { tipoServicioId: Number(tipoServicioId), datosWizard: form },
       });
       setSpec(res);
+      return true;
     } catch (err) {
       setError(err.message);
+      return false;
     } finally {
       setGuardando(false);
     }
+  }
+
+  async function aplicarYVolver() {
+    const ok = await guardar();
+    if (ok) navigate(`/boms/${id}`);
   }
 
   async function ejecutarAccion(accion, comentario) {
@@ -401,8 +409,8 @@ export default function BomServicios() {
           </Card>
 
           {editable && (
-            <Button onClick={guardar} disabled={guardando} style={{ marginBottom: 24 }}>
-              {guardando ? 'Guardando...' : 'Guardar especificación'}
+            <Button onClick={aplicarYVolver} disabled={guardando} style={{ marginBottom: 24 }}>
+              {guardando ? 'Aplicando...' : 'Aplicar'}
             </Button>
           )}
         </>

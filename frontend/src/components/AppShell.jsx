@@ -4,7 +4,7 @@ import logo from '../assets/logo.png';
 import { IconDashboard, IconLibrary, IconAudit, IconUsers, IconLogout, IconBriefcase, IconWrench, IconBox } from './icons.jsx';
 
 const ROLES_VISIBILIDAD_AMPLIADA = ['superadmin', 'gerencia'];
-const ROLES_ADMINISTRAN_CATALOGOS = ['lider_tecnico', 'superadmin'];
+const ROLES_ADMINISTRAN_CATALOGOS = ['lider_tecnico', 'preventa', 'superadmin'];
 
 function NavLink({ to, icon: Icon, children, exact }) {
   const location = useLocation();

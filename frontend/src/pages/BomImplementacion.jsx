@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext.jsx';
 import { apiFetch } from '../services/api.js';
 import PageHeader from '../components/PageHeader.jsx';
@@ -29,6 +29,7 @@ function nuevaSede(nombre) {
 
 export default function BomImplementacion() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { token, me } = useAuth();
 
   const [tecnologias, setTecnologias] = useState([]);
@@ -158,12 +159,19 @@ export default function BomImplementacion() {
       setResultado(res.resultado);
       setCotizacion(res);
       setEstadoGuardado('guardado');
+      return true;
     } catch (err) {
       setError(err.message);
       setEstadoGuardado('error');
+      return false;
     } finally {
       setGuardando(false);
     }
+  }
+
+  async function aplicarYVolver() {
+    const ok = await guardarYCalcular();
+    if (ok) navigate(`/boms/${id}`);
   }
 
   async function ejecutarAccion(accion, comentario) {
@@ -424,6 +432,12 @@ export default function BomImplementacion() {
             </table>
           </div>
         </Card>
+      )}
+
+      {editable && (
+        <Button onClick={aplicarYVolver} disabled={guardando} style={{ marginTop: 20 }}>
+          {guardando ? 'Aplicando...' : 'Aplicar'}
+        </Button>
       )}
     </div>
   );

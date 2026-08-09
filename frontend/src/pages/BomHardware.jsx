@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext.jsx';
 import { apiFetch } from '../services/api.js';
 import PageHeader from '../components/PageHeader.jsx';
@@ -12,6 +12,7 @@ const money = (n) => Number(n).toLocaleString('es-CO', { maximumFractionDigits: 
 
 export default function BomHardware() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { token } = useAuth();
   const [items, setItems] = useState([]);
   const [q, setQ] = useState('');
@@ -197,6 +198,8 @@ export default function BomHardware() {
           </div>
         )}
       </Card>
+
+      <Button onClick={() => navigate(`/boms/${id}`)} style={{ marginTop: 20 }}>Aplicar</Button>
     </div>
   );
 }

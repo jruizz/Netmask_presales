@@ -10,7 +10,7 @@ import { IconBox, IconTrash, IconPlus } from '../components/icons.jsx';
 const money = (n) => Number(n).toLocaleString('es-CO', { maximumFractionDigits: 2 });
 
 function formularioVacio() {
-  return { nombre: '', sku: '', numeroParte: '', descripcion: '', precio: '', moneda: 'COP', tecnologiaImplSugeridaId: '' };
+  return { nombre: '', marca: '', sku: '', numeroParte: '', descripcion: '', precio: '', moneda: 'COP', tecnologiaImplSugeridaId: '' };
 }
 
 // Componente de nivel superior (no anidado dentro de CatalogoHardware): si se
@@ -23,6 +23,10 @@ function FormularioItem({ form, setForm, tecnologias, guardar, cancelar, guardan
         <div className="field">
           <label>Nombre</label>
           <input className="input" required value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} placeholder="Ej. FortiGate 60F" />
+        </div>
+        <div className="field">
+          <label>Marca</label>
+          <input className="input" value={form.marca} onChange={(e) => setForm({ ...form, marca: e.target.value })} placeholder="Ej. Fortinet, Cisco..." />
         </div>
         <div className="field">
           <label>SKU</label>
@@ -92,7 +96,7 @@ export default function CatalogoHardware() {
   function empezarEdicion(it) {
     setEditandoId(it.id);
     setForm({
-      nombre: it.nombre, sku: it.sku || '', numeroParte: it.numero_parte || '', descripcion: it.descripcion || '',
+      nombre: it.nombre, marca: it.marca || '', sku: it.sku || '', numeroParte: it.numero_parte || '', descripcion: it.descripcion || '',
       precio: String(it.precio), moneda: it.moneda || 'COP',
       tecnologiaImplSugeridaId: it.tecnologia_impl_sugerida_id ? String(it.tecnologia_impl_sugerida_id) : '',
     });
@@ -108,6 +112,7 @@ export default function CatalogoHardware() {
     try {
       const payload = {
         nombre: form.nombre,
+        marca: form.marca || undefined,
         sku: form.sku || undefined,
         numeroParte: form.numeroParte || undefined,
         descripcion: form.descripcion || undefined,
@@ -161,7 +166,7 @@ export default function CatalogoHardware() {
             <table className="nm-table">
               <thead>
                 <tr>
-                  <th>Nombre</th><th>SKU</th><th>Descripción</th><th>Precio</th><th>Tecnología sugerida</th><th></th>
+                  <th>Nombre</th><th>Marca</th><th>SKU</th><th>Descripción</th><th>Precio de lista</th><th></th>
                 </tr>
               </thead>
               <tbody>
@@ -169,10 +174,10 @@ export default function CatalogoHardware() {
                   <Fragment key={it.id}>
                     <tr>
                       <td style={{ fontWeight: 600 }}>{it.nombre}</td>
+                      <td className="muted">{it.marca || '—'}</td>
                       <td className="muted">{it.sku || '—'}</td>
                       <td className="text-sm muted">{it.descripcion || '—'}</td>
                       <td>${money(it.precio)} {it.moneda || 'COP'}</td>
-                      <td className="text-sm muted">{it.tecnologia_impl_sugerida_id ? (tecnologias.find((t) => t.id === it.tecnologia_impl_sugerida_id)?.nombre || '—') : '—'}</td>
                       <td>
                         <div className="row">
                           <Button size="sm" variant="outline" onClick={() => empezarEdicion(it)}>Editar</Button>

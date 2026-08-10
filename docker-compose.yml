@@ -1,13 +1,11 @@
 services:
 
   proxy:
-    image: nginx:alpine
+    build: ./proxy
     container_name: netmask_presales_proxy
     restart: unless-stopped
     ports:
       - "${PUBLISHED_PORT:-8080}:80"
-    volumes:
-      - ./proxy/conf.d:/etc/nginx/conf.d:ro
     depends_on:
       - frontend
       - backend
@@ -43,7 +41,7 @@ services:
       - netmask_net
 
   db:
-    image: postgres:16-alpine
+    build: ./db
     container_name: netmask_presales_db
     restart: unless-stopped
     environment:
@@ -52,7 +50,6 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./db/init:/docker-entrypoint-initdb.d:ro
     networks:
       - netmask_net
 

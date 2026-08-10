@@ -6,7 +6,7 @@
 CREATE TABLE comerciales (
   id SERIAL PRIMARY KEY,
   nombre TEXT NOT NULL,
-  sector TEXT NOT NULL CHECK (sector IN ('OT', 'IT')),
+  sector TEXT NOT NULL CHECK (sector IN ('OT', 'IT', 'IT/OT')),
   activo BOOLEAN NOT NULL DEFAULT true,
   creado_en TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -15,13 +15,14 @@ INSERT INTO comerciales (nombre, sector) VALUES
   ('David Castrillón', 'OT'),
   ('Paulina Henao', 'OT'),
   ('Alejandro Cuadros', 'OT'),
-  ('Juan José Gaviria', 'OT'),
+  ('Juan José Gaviria', 'IT'),
   ('Sebastian Isaza', 'OT'),
   ('Esteban Gomez', 'IT'),
-  ('David Cano', 'IT'),
-  ('Sebastian Castrillón', 'IT'),
+  ('David Cano', 'IT/OT'),
+  ('Sebastian Castrillón', 'IT/OT'),
   ('Daniela Martinez', 'IT'),
   ('Julian Abello', 'IT'),
+  ('Carlos Amorocho', 'OT'),
   ('Ana Linda Farkas', 'IT');
 
 ALTER TABLE boms ADD COLUMN comercial_id INTEGER REFERENCES comerciales(id);

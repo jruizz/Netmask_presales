@@ -6,6 +6,7 @@ import Card from '../components/Card.jsx';
 import Button from '../components/Button.jsx';
 import Badge from '../components/Badge.jsx';
 import { IconTrash } from '../components/icons.jsx';
+import Field from '../components/Field.jsx';
 
 const BADGE_POR_SECTOR = { OT: 'info', IT: 'success', 'IT/OT': 'warning' };
 
@@ -109,18 +110,16 @@ export default function Comerciales() {
           Agregar comercial
         </h4>
         <form onSubmit={crear} className="row" style={{ alignItems: 'end', flexWrap: 'wrap' }}>
-          <div className="field" style={{ marginBottom: 0, flex: 1, minWidth: 200 }}>
-            <label>Nombre</label>
+          <Field label="Nombre" style={{ marginBottom: 0, flex: 1, minWidth: 200 }}>
             <input className="input" required value={nuevo.nombre} onChange={(e) => setNuevo({ ...nuevo, nombre: e.target.value })} />
-          </div>
-          <div className="field" style={{ marginBottom: 0 }}>
-            <label>Sector</label>
+          </Field>
+          <Field label="Sector" style={{ marginBottom: 0 }}>
             <select className="input" value={nuevo.sector} onChange={(e) => setNuevo({ ...nuevo, sector: e.target.value })}>
               <option value="OT">OT</option>
               <option value="IT">IT</option>
               <option value="IT/OT">IT/OT</option>
             </select>
-          </div>
+          </Field>
           <Button type="submit">Agregar</Button>
         </form>
       </Card>

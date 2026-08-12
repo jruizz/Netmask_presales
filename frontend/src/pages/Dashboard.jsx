@@ -7,8 +7,8 @@ import Button from '../components/Button.jsx';
 import Badge from '../components/Badge.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import { IconPlus, IconBox } from '../components/icons.jsx';
+import { ROLES_VISIBILIDAD_AMPLIADA } from '../constants/roles.js';
 
-const ROLES_VISIBILIDAD_AMPLIADA = ['superadmin', 'gerencia'];
 const ESTADO_BADGE = { borrador: 'neutral', activo: 'info', cerrado: 'success' };
 
 export default function Dashboard() {

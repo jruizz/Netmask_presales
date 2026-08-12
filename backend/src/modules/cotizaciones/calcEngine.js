@@ -1,5 +1,5 @@
 // Motor de calculo puro, portado de Confg_Calculadora_SAMUEL/index.html
-// (calcPM, calcViaticosCOP, calcBolsaHoras, calcSiteSurveyTotals, buildBlocks,
+// (calcPM, calcViaticosPorSede, calcBolsaHoras, calcSiteSurveyTotals, buildBlocks,
 // recalcEPSP, recalcNetmask). No accede a la base de datos: recibe los datos
 // del catalogo ya resueltos y devuelve el resultado calculado.
 
@@ -12,8 +12,8 @@ export function calcBolsaHoras(sedes, horasDia) {
 }
 
 // Desglose de viaticos por sede, para el Excel de Cotizacion (tabla "Viaticos para
-// la Implementacion" del formato real) y para calcViaticosCOP (que ahora solo suma
-// esto, en vez de duplicar la formula).
+// la Implementacion" del formato real) y para el total que consumen
+// recalcularEpsp/recalcularNetmask via .reduce(...).
 export function calcViaticosPorSede(sedes, tarifaLocal, bolsaActiva, horasDia) {
   return sedes.map((s) => {
     let total = 0;
@@ -39,11 +39,6 @@ export function calcViaticosPorSede(sedes, tarifaLocal, bolsaActiva, horasDia) {
       esLocal: !!s.esLocal,
     };
   });
-}
-
-export function calcViaticosCOP(sedes, tarifaLocal, bolsaActiva, horasDia) {
-  return calcViaticosPorSede(sedes, tarifaLocal, bolsaActiva, horasDia)
-    .reduce((t, s) => t + s.totalViaticos, 0);
 }
 
 export function calcSiteSurveyTotals(siteSurveySedes, rangosById) {

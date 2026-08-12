@@ -5,19 +5,12 @@ import { apiFetch } from '../services/api.js';
 import PageHeader from '../components/PageHeader.jsx';
 import Card from '../components/Card.jsx';
 import Button from '../components/Button.jsx';
-import Badge from '../components/Badge.jsx';
+import AprobacionBanner from '../components/AprobacionBanner.jsx';
 import { IconTrash } from '../components/icons.jsx';
+import { formatMoney } from '../utils/format.js';
+import Field from '../components/Field.jsx';
 
-const money = (n) => Number(n).toLocaleString('es-CO', { maximumFractionDigits: 0 });
-
-const ESTADOS_LABEL = {
-  borrador: 'Borrador', revision_lider: 'En revisión — Líder Técnico', aprobado_lider: 'Aprobado por Líder Técnico',
-  revision_gerencia: 'En revisión — Gerencia', aprobado: 'Aprobado', generado: 'Generado final', rechazado: 'Rechazado',
-};
-const ESTADOS_BADGE = {
-  borrador: 'neutral', revision_lider: 'warning', aprobado_lider: 'info',
-  revision_gerencia: 'warning', aprobado: 'success', generado: 'success', rechazado: 'danger',
-};
+const money = formatMoney;
 
 function nuevaSede(nombre) {
   return {
@@ -205,81 +198,38 @@ export default function BomImplementacion() {
       {error && <div className="alert alert-danger">{error}</div>}
 
       {cotizacion?.requiere_aprobacion && (
-        <Card style={{ marginBottom: 20 }}>
-          <div className="row-between">
-            <div className="row">
-              <strong>Estado:</strong> <Badge variant={ESTADOS_BADGE[cotizacion.estado] || 'neutral'}>{ESTADOS_LABEL[cotizacion.estado] || cotizacion.estado}</Badge>
-            </div>
-            <div className="row" style={{ flexWrap: 'wrap' }}>
-              {cotizacion.estado === 'borrador' && (rol === 'preventa' || rol === 'superadmin') && (
-                <Button size="sm" onClick={() => ejecutarAccion('enviar-revision-lider')}>Enviar a revisión (Líder Técnico)</Button>
-              )}
-              {cotizacion.estado === 'rechazado' && (rol === 'preventa' || rol === 'superadmin') && (
-                <Button size="sm" onClick={() => ejecutarAccion('enviar-revision-lider')}>Reenviar a revisión</Button>
-              )}
-              {cotizacion.estado === 'revision_lider' && (rol === 'lider_tecnico' || rol === 'superadmin') && (
-                <>
-                  <Button size="sm" onClick={() => ejecutarAccion('aprobar-lider')}>Aprobar (Líder Técnico)</Button>
-                  <Button size="sm" variant="danger" onClick={() => ejecutarAccion('rechazar', 'Rechazado por líder técnico')}>Rechazar</Button>
-                </>
-              )}
-              {cotizacion.estado === 'aprobado_lider' && (rol === 'lider_tecnico' || rol === 'superadmin') && (
-                <Button size="sm" onClick={() => ejecutarAccion('enviar-revision-gerencia')}>Enviar a revisión (Gerencia)</Button>
-              )}
-              {cotizacion.estado === 'revision_gerencia' && (rol === 'gerencia' || rol === 'superadmin') && (
-                <>
-                  <Button size="sm" onClick={() => ejecutarAccion('aprobar-gerencia')}>Aprobar (Gerencia)</Button>
-                  <Button size="sm" variant="danger" onClick={() => ejecutarAccion('rechazar', 'Rechazado por gerencia')}>Rechazar</Button>
-                </>
-              )}
-              {cotizacion.estado === 'aprobado' && (
-                <Button size="sm" onClick={() => ejecutarAccion('marcar-generado')}>Marcar como generado</Button>
-              )}
-            </div>
-          </div>
-          {cotizacion.historial?.length > 0 && (
-            <ul className="text-sm muted" style={{ margin: '12px 0 0', paddingLeft: 18 }}>
-              {cotizacion.historial.map((h) => (
-                <li key={h.id} style={{ marginBottom: 4 }}>{new Date(h.fecha).toLocaleString('es-CO')} — {h.estado_anterior || '—'} → {h.estado_nuevo} ({h.usuario_nombre}){h.comentario ? `: ${h.comentario}` : ''}</li>
-              ))}
-            </ul>
-          )}
-        </Card>
+        <AprobacionBanner estado={cotizacion.estado} historial={cotizacion.historial} rol={rol} onAccion={ejecutarAccion} />
       )}
 
       <Card title="Proyecto" style={{ marginBottom: 16 }}>
-        <div className="field">
-          <label>Modo</label>
+        <Field label="Modo">
           <select className="input" disabled={!editable} value={modo} onChange={(e) => setModo(e.target.value)}>
             <option value="netmask">Servicio Netmask (COP)</option>
             <option value="epsp">Servicio EPSP (días EPSP, TD Synnex/Fortinet)</option>
           </select>
-        </div>
+        </Field>
         <div className="form-grid">
-          <div className="field">
-            <label>Nivel de ingeniería</label>
+          <Field label="Nivel de ingeniería">
             <select className="input" disabled={!editable} value={nivelIngenieria} onChange={(e) => setNivelIngenieria(Number(e.target.value))}>
               <option value={1}>Nivel I</option>
               <option value={2}>Nivel II</option>
               <option value={3}>Nivel III</option>
             </select>
-          </div>
-          <div className="field">
-            <label>Número de plantas/sedes</label>
+          </Field>
+          <Field label="Número de plantas/sedes">
             <input className="input" type="number" min="1" step="1" disabled={!editable} value={numeroPlantas}
               onChange={(e) => setNumeroPlantas(Math.max(1, Math.round(Number(e.target.value)) || 1))} />
-          </div>
+          </Field>
         </div>
         <label className="checkbox-row" style={{ marginBottom: 10 }}>
           <input type="checkbox" disabled={!editable} checked={esAliado} onChange={(e) => setEsAliado(e.target.checked)} /> Es aliado
           {tarifaActual && <span className="muted">· Tarifa: ${money(tarifaActual)} COP/hora</span>}
         </label>
         {modo === 'epsp' && (
-          <div className="field">
-            <label>TRM (COP/USD)</label>
+          <Field label="TRM (COP/USD)">
             <input className="input" type="number" min="1" step="1" disabled={!editable} value={trm}
               onChange={(e) => setTrm(Math.max(1, Math.round(Number(e.target.value)) || 1))} style={{ maxWidth: 200 }} />
-          </div>
+          </Field>
         )}
         <label className="checkbox-row">
           <input type="checkbox" disabled={!editable} checked={requiereAprobacion} onChange={(e) => setRequiereAprobacion(e.target.checked)} />
@@ -306,13 +256,13 @@ export default function BomImplementacion() {
               <input type="checkbox" disabled={!editable} checked={s.esLocal} onChange={(e) => actualizarSede(i, 'esLocal', e.target.checked)} /> Sede local (sin viáticos de viaje)
             </label>
             <div className="form-grid-3">
-              <div className="field"><label>Ingenieros</label><input className="input" type="number" min="1" step="1" disabled={!editable} value={s.ingenieros} onChange={(e) => actualizarSede(i, 'ingenieros', Math.max(1, Math.round(Number(e.target.value)) || 1))} /></div>
-              <div className="field"><label>Días en sitio</label><input className="input" type="number" min="0" step="1" disabled={!editable} value={s.dias} onChange={(e) => actualizarSede(i, 'dias', Math.max(0, Math.round(Number(e.target.value)) || 0))} /></div>
-              <div className="field"><label>Vuelo (COP)</label><input className="input" type="number" min="0" disabled={!editable} value={s.vuelo} onChange={(e) => actualizarSede(i, 'vuelo', Number(e.target.value))} /></div>
-              <div className="field"><label>Transp. aeropuerto</label><input className="input" type="number" min="0" disabled={!editable} value={s.transporteAeropuerto} onChange={(e) => actualizarSede(i, 'transporteAeropuerto', Number(e.target.value))} /></div>
-              <div className="field"><label>Alimentación/día</label><input className="input" type="number" min="0" disabled={!editable} value={s.alimentacionDia} onChange={(e) => actualizarSede(i, 'alimentacionDia', Number(e.target.value))} /></div>
-              <div className="field"><label>Hospedaje/día</label><input className="input" type="number" min="0" disabled={!editable} value={s.hospedajeDia} onChange={(e) => actualizarSede(i, 'hospedajeDia', Number(e.target.value))} /></div>
-              <div className="field"><label>Transp. interno/día</label><input className="input" type="number" min="0" disabled={!editable} value={s.transporteInternoDia} onChange={(e) => actualizarSede(i, 'transporteInternoDia', Number(e.target.value))} /></div>
+              <Field label="Ingenieros"><input className="input" type="number" min="1" step="1" disabled={!editable} value={s.ingenieros} onChange={(e) => actualizarSede(i, 'ingenieros', Math.max(1, Math.round(Number(e.target.value)) || 1))} /></Field>
+              <Field label="Días en sitio"><input className="input" type="number" min="0" step="1" disabled={!editable} value={s.dias} onChange={(e) => actualizarSede(i, 'dias', Math.max(0, Math.round(Number(e.target.value)) || 0))} /></Field>
+              <Field label="Vuelo (COP)"><input className="input" type="number" min="0" disabled={!editable} value={s.vuelo} onChange={(e) => actualizarSede(i, 'vuelo', Number(e.target.value))} /></Field>
+              <Field label="Transp. aeropuerto"><input className="input" type="number" min="0" disabled={!editable} value={s.transporteAeropuerto} onChange={(e) => actualizarSede(i, 'transporteAeropuerto', Number(e.target.value))} /></Field>
+              <Field label="Alimentación/día"><input className="input" type="number" min="0" disabled={!editable} value={s.alimentacionDia} onChange={(e) => actualizarSede(i, 'alimentacionDia', Number(e.target.value))} /></Field>
+              <Field label="Hospedaje/día"><input className="input" type="number" min="0" disabled={!editable} value={s.hospedajeDia} onChange={(e) => actualizarSede(i, 'hospedajeDia', Number(e.target.value))} /></Field>
+              <Field label="Transp. interno/día"><input className="input" type="number" min="0" disabled={!editable} value={s.transporteInternoDia} onChange={(e) => actualizarSede(i, 'transporteInternoDia', Number(e.target.value))} /></Field>
             </div>
           </div>
         ))}

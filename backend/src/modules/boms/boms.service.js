@@ -1,7 +1,6 @@
 import { query } from '../../db/pool.js';
 import { HttpError } from '../../middlewares/errorHandler.js';
-
-const ROLES_VISIBILIDAD_AMPLIADA = ['superadmin', 'gerencia'];
+import { ROLES_VISIBILIDAD_AMPLIADA } from '../../shared/roles.js';
 
 export async function listBoms(user, { mine }) {
   const verTodos = ROLES_VISIBILIDAD_AMPLIADA.includes(user.rolClave) && !mine;

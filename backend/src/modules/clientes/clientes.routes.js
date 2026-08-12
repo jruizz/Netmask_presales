@@ -42,7 +42,7 @@ clientesRouter.post('/', requirePermiso('crear'), async (req, res, next) => {
   }
 });
 
-clientesRouter.put('/:id', requireRole('preventa', 'superadmin'), async (req, res, next) => {
+clientesRouter.put('/:id', requirePermiso('crear'), async (req, res, next) => {
   try {
     const data = clienteSchema.parse(req.body);
     res.json(await clientesService.actualizarCliente(req.params.id, data));

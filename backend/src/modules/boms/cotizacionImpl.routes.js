@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import * as cotizacionService from '../cotizaciones/cotizacionImpl.service.js';
-import * as bomsService from './boms.service.js';
+import { assertBomAccess } from './bomAccess.js';
 import { authMiddleware } from '../../middlewares/authMiddleware.js';
 import { requirePermiso, requireRole } from '../../middlewares/roleGuard.js';
 import { HttpError } from '../../middlewares/errorHandler.js';
@@ -40,10 +40,6 @@ const cotizacionSchema = z.object({
     rangoId: z.number().int().positive(),
   })).default([]),
 });
-
-async function assertBomAccess(req) {
-  await bomsService.getBom(req.params.bomId, req.user);
-}
 
 cotizacionImplRouter.get('/', requirePermiso('ver'), async (req, res, next) => {
   try {

@@ -5,6 +5,7 @@ import PageHeader from '../components/PageHeader.jsx';
 import Card from '../components/Card.jsx';
 import Button from '../components/Button.jsx';
 import Badge from '../components/Badge.jsx';
+import Field from '../components/Field.jsx';
 
 // Componente de nivel superior (no anidado dentro de Usuarios): si se define
 // adentro, React lo trata como un tipo de componente nuevo en cada render y
@@ -14,25 +15,21 @@ function FormularioEdicion({ form, setForm, roles, guardar, cancelar, guardando 
     <tr>
       <td colSpan={6} style={{ padding: '12px 0' }}>
         <form onSubmit={guardar} className="form-grid" style={{ alignItems: 'end' }}>
-          <div className="field">
-            <label>Nombre</label>
+          <Field label="Nombre">
             <input className="input" required value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} />
-          </div>
-          <div className="field">
-            <label>Correo</label>
+          </Field>
+          <Field label="Correo">
             <input className="input" required type="email" value={form.correo} onChange={(e) => setForm({ ...form, correo: e.target.value })} />
-          </div>
-          <div className="field">
-            <label>Rol</label>
+          </Field>
+          <Field label="Rol">
             <select className="input" required value={form.rolClave} onChange={(e) => setForm({ ...form, rolClave: e.target.value })}>
               {roles.map((r) => <option key={r.id} value={r.clave}>{r.nombre_visible}</option>)}
             </select>
-          </div>
-          <div className="field">
-            <label>Nueva contraseña (opcional)</label>
+          </Field>
+          <Field label="Nueva contraseña (opcional)">
             <input className="input" type="password" minLength={8} placeholder="Dejar en blanco para no cambiarla"
               value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
-          </div>
+          </Field>
           <div className="row" style={{ gridColumn: 'span 1' }}>
             <Button type="submit" disabled={guardando}>{guardando ? 'Guardando...' : 'Guardar'}</Button>
             <Button variant="outline" onClick={cancelar}>Cancelar</Button>
@@ -166,25 +163,21 @@ export default function Usuarios() {
           Crear usuario
         </h4>
         <form onSubmit={crearUsuario} className="form-grid" style={{ alignItems: 'end' }}>
-          <div className="field">
-            <label>Nombre</label>
+          <Field label="Nombre">
             <input className="input" required value={nuevo.nombre} onChange={(e) => setNuevo({ ...nuevo, nombre: e.target.value })} />
-          </div>
-          <div className="field">
-            <label>Correo</label>
+          </Field>
+          <Field label="Correo">
             <input className="input" required type="email" value={nuevo.correo} onChange={(e) => setNuevo({ ...nuevo, correo: e.target.value })} />
-          </div>
-          <div className="field">
-            <label>Contraseña</label>
+          </Field>
+          <Field label="Contraseña">
             <input className="input" required type="password" minLength={8} value={nuevo.password} onChange={(e) => setNuevo({ ...nuevo, password: e.target.value })} />
-          </div>
-          <div className="field">
-            <label>Rol</label>
+          </Field>
+          <Field label="Rol">
             <select className="input" required value={nuevo.rolClave} onChange={(e) => setNuevo({ ...nuevo, rolClave: e.target.value })}>
               <option value="">--</option>
               {roles.map((r) => <option key={r.id} value={r.clave}>{r.nombre_visible}</option>)}
             </select>
-          </div>
+          </Field>
           <Button type="submit" style={{ gridColumn: 'span 1' }}>Crear</Button>
         </form>
       </Card>

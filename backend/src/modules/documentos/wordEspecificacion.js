@@ -1,40 +1,14 @@
 import {
-  Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, Header, Footer,
-  ImageRun, AlignmentType, HeadingLevel, WidthType, ShadingType, PageNumber, BorderStyle,
+  Document, Packer, Paragraph, TextRun, Table, TableRow, Header, Footer,
+  ImageRun, AlignmentType, WidthType, ShadingType, PageNumber,
 } from 'docx';
 import { LOGO_BUFFER } from '../../assets/logoNetmask.js';
-
-const NM = { dark: '07182D', light: '0094CE', textDark: '222222', white: 'FFFFFF', grayBg: 'F2F2F2' };
-const FONT = 'Calibri';
+import { NM, FONT, titulo, parrafo, bullet, celda, filaInfo } from './wordStyles.js';
 
 const ESTADOS_LABEL = {
   borrador: 'Borrador', revision_lider: 'En revisión — Líder Técnico', aprobado_lider: 'Aprobado por Líder Técnico',
   revision_gerencia: 'En revisión — Gerencia', aprobado: 'Aprobado', generado: 'Generado final', rechazado: 'Rechazado',
 };
-
-function titulo(texto, num) {
-  return new Paragraph({
-    heading: HeadingLevel.HEADING_1,
-    spacing: { before: 300, after: 150 },
-    children: [new TextRun({ text: `${num ? num + '. ' : ''}${texto}`, bold: true, color: NM.dark, font: FONT, size: 28 })],
-  });
-}
-function parrafo(texto) {
-  return new Paragraph({ spacing: { after: 120 }, children: [new TextRun({ text: texto, font: FONT, size: 22, color: NM.textDark })] });
-}
-function bullet(texto) {
-  return new Paragraph({ bullet: { level: 0 }, spacing: { after: 60 }, children: [new TextRun({ text: texto, font: FONT, size: 21, color: NM.textDark })] });
-}
-function celda(texto, opts = {}) {
-  return new TableCell({
-    width: opts.width ? { size: opts.width, type: WidthType.PERCENTAGE } : undefined,
-    shading: opts.bg ? { type: ShadingType.SOLID, fill: opts.bg } : undefined,
-    children: [new Paragraph({ children: [new TextRun({ text: String(texto ?? '—'), font: FONT, size: 20, bold: !!opts.bold, color: opts.color || NM.textDark })] })],
-  });
-}
-function filaInfo(label, valor) {
-  return new TableRow({ children: [celda(label, { width: 35, bg: NM.grayBg, bold: true }), celda(valor, { width: 65 })] });
-}
 
 export async function generarWordEspecificacion({ bom, cliente, especificacion, tipoServicio, severidadesCatalogo }) {
   const dw = especificacion.datos_wizard || {};
@@ -108,15 +82,23 @@ export async function generarWordEspecificacion({ bom, cliente, especificacion, 
     .map(([k, v]) => filaInfo(k, String(v)));
 
   const alcance = [
-    titulo('Alcance Específico del Servicio', 5),
+    titulo('Alcance Específico del Servicio', 6),
     new Paragraph({ spacing: { after: 80 }, children: [new TextRun({ text: 'Dimensionamiento', bold: true, font: FONT, size: 22 })] }),
     dimensionamientoFilas.length
       ? new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: dimensionamientoFilas })
       : parrafo('Sin datos de dimensionamiento registrados.'),
   ];
 
+  const ingenieriaTecnologia = [
+    titulo('Ingeniería y Tecnología del Servicio', 5),
+    new Paragraph({ spacing: { after: 80 }, children: [new TextRun({ text: 'Niveles de atención asignados', bold: true, font: FONT, size: 22 })] }),
+    ...((dw.niveles || []).length ? dw.niveles.map(bullet) : [parrafo('Sin niveles de atención registrados.')]),
+    new Paragraph({ spacing: { before: 150, after: 80 }, children: [new TextRun({ text: 'Categorías tecnológicas cubiertas', bold: true, font: FONT, size: 22 })] }),
+    ...((dw.tecnologias || []).length ? dw.tecnologias.map(bullet) : [parrafo('Sin categorías tecnológicas registradas.')]),
+  ];
+
   const modalidadCobertura = [
-    titulo('Modalidad de Prestación y Cobertura Horaria', 6),
+    titulo('Modalidad de Prestación y Cobertura Horaria', 7),
     parrafo(`El servicio se presta en modalidad ${dw.modalidad || '—'}, con cobertura ${dw.cobertura || '—'}.`),
   ];
 
@@ -126,7 +108,7 @@ export async function generarWordEspecificacion({ bom, cliente, especificacion, 
     celda(s.tiempoSolucion, { width: 40 }),
   ] }));
   const sla = [
-    titulo('SLA y Severidades', 7),
+    titulo('SLA y Severidades', 8),
     new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [
       new TableRow({ children: [celda('Severidad', { bg: NM.dark, color: NM.white, bold: true }), celda('Tiempo de Respuesta', { bg: NM.dark, color: NM.white, bold: true }), celda('Tiempo de Solución', { bg: NM.dark, color: NM.white, bold: true })] }),
       ...slaFilas,
@@ -140,7 +122,7 @@ export async function generarWordEspecificacion({ bom, cliente, especificacion, 
     celda(c.sev), celda(c.nombre), celda(c.cargo), celda(c.correo), celda(c.telefono), celda(c.disponibilidad),
   ] }));
   const escalamiento = [
-    titulo('Matriz de Escalamiento', 8),
+    titulo('Matriz de Escalamiento', 9),
     new Paragraph({ spacing: { after: 80 }, children: [new TextRun({ text: 'Escalamiento interno Netmask', bold: true, font: FONT, size: 22 })] }),
     escalamientoFilas.length
       ? new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [
@@ -158,32 +140,32 @@ export async function generarWordEspecificacion({ bom, cliente, especificacion, 
   ];
 
   const canales = [
-    titulo('Canales de Comunicación', 9),
+    titulo('Canales de Comunicación', 10),
     ...(dw.canales || []).map(bullet),
   ];
 
   const entregables = [
-    titulo('Entregables y Frecuencia', 10),
+    titulo('Entregables y Frecuencia', 11),
     ...(dw.entregables || []).map(bullet),
   ];
 
-  const supuestos = [titulo('Supuestos', 11), ...(dw.supuestos || []).map(bullet)];
+  const supuestos = [titulo('Supuestos', 12), ...(dw.supuestos || []).map(bullet)];
   const exclusiones = [
-    titulo('Exclusiones', 12),
+    titulo('Exclusiones', 13),
     ...(dw.exclusiones || []).map(bullet),
     new Paragraph({ spacing: { before: 150, after: 80 }, children: [new TextRun({ text: `Exclusiones propias del servicio ${tipoServicio.nombre}:`, bold: true, font: FONT, size: 21 })] }),
     ...(tipoServicio.excluye || []).map(bullet),
   ];
-  const responsabilidadesNetmask = [titulo('Responsabilidades de Netmask', 13), ...(tipoServicio.incluye || []).map(bullet)];
-  const responsabilidadesCliente = [titulo('Responsabilidades del Cliente', 14), ...(tipoServicio.condiciones_cliente || []).map(bullet)];
+  const responsabilidadesNetmask = [titulo('Responsabilidades de Netmask', 14), ...(tipoServicio.incluye || []).map(bullet)];
+  const responsabilidadesCliente = [titulo('Responsabilidades del Cliente', 15), ...(tipoServicio.condiciones_cliente || []).map(bullet)];
 
   const vigencia = [
-    titulo('Vigencia Contractual', 15),
+    titulo('Vigencia Contractual', 16),
     parrafo(`El presente servicio tendrá una vigencia de ${dw.vigencia || '—'} meses, con fecha de inicio ${dw.fechaInicio || 'a definir'}.`),
   ];
 
   const firma = [
-    titulo('Firma y Aprobación', 16),
+    titulo('Firma y Aprobación', 17),
     new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [
       new TableRow({ children: [celda('Por Netmask SAS', { bg: NM.dark, color: NM.white, bold: true, width: 50 }), celda(`Por ${cliente.nombre_cliente}`, { bg: NM.dark, color: NM.white, bold: true, width: 50 })] }),
       new TableRow({ children: [celda('Nombre: _______________________', { width: 50 }), celda('Nombre: _______________________', { width: 50 })] }),
@@ -211,7 +193,7 @@ export async function generarWordEspecificacion({ bom, cliente, especificacion, 
         })] }),
       },
       children: [
-        ...portada, ...control, ...resumenEjecutivo, ...objetivo, ...datosGenerales, ...alcance,
+        ...portada, ...control, ...resumenEjecutivo, ...objetivo, ...datosGenerales, ...ingenieriaTecnologia, ...alcance,
         ...modalidadCobertura, ...sla, ...escalamiento, ...canales, ...entregables, ...supuestos,
         ...exclusiones, ...responsabilidadesNetmask, ...responsabilidadesCliente, ...vigencia, ...firma,
       ],

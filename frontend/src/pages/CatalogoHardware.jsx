@@ -6,8 +6,10 @@ import Card from '../components/Card.jsx';
 import Button from '../components/Button.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import { IconBox, IconTrash, IconPlus } from '../components/icons.jsx';
+import { formatMoney } from '../utils/format.js';
+import Field from '../components/Field.jsx';
 
-const money = (n) => Number(n).toLocaleString('es-CO', { maximumFractionDigits: 2 });
+const money = (n) => formatMoney(n, 2);
 
 function formularioVacio() {
   return { nombre: '', marca: '', sku: '', numeroParte: '', descripcion: '', precio: '', moneda: 'COP', tecnologiaImplSugeridaId: '' };
@@ -20,44 +22,36 @@ function FormularioItem({ form, setForm, tecnologias, guardar, cancelar, guardan
   return (
     <Card style={{ marginBottom: 20 }}>
       <div className="form-grid" style={{ marginBottom: 14 }}>
-        <div className="field">
-          <label>Nombre</label>
+        <Field label="Nombre">
           <input className="input" required value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} placeholder="Ej. FortiGate 60F" />
-        </div>
-        <div className="field">
-          <label>Marca</label>
+        </Field>
+        <Field label="Marca">
           <input className="input" value={form.marca} onChange={(e) => setForm({ ...form, marca: e.target.value })} placeholder="Ej. Fortinet, Cisco..." />
-        </div>
-        <div className="field">
-          <label>SKU</label>
+        </Field>
+        <Field label="SKU">
           <input className="input" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} />
-        </div>
-        <div className="field">
-          <label>Número de parte</label>
+        </Field>
+        <Field label="Número de parte">
           <input className="input" value={form.numeroParte} onChange={(e) => setForm({ ...form, numeroParte: e.target.value })} />
-        </div>
-        <div className="field" style={{ gridColumn: '1 / -1' }}>
-          <label>Descripción</label>
+        </Field>
+        <Field label="Descripción" style={{ gridColumn: '1 / -1' }}>
           <input className="input" value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} />
-        </div>
-        <div className="field">
-          <label>Precio</label>
+        </Field>
+        <Field label="Precio">
           <input className="input" type="number" min="0" step="0.01" required value={form.precio} onChange={(e) => setForm({ ...form, precio: e.target.value })} />
-        </div>
-        <div className="field">
-          <label>Moneda</label>
+        </Field>
+        <Field label="Moneda">
           <select className="input" value={form.moneda} onChange={(e) => setForm({ ...form, moneda: e.target.value })}>
             <option value="COP">COP</option>
             <option value="USD">USD</option>
           </select>
-        </div>
-        <div className="field">
-          <label>Tecnología de Implementación sugerida</label>
+        </Field>
+        <Field label="Tecnología de Implementación sugerida">
           <select className="input" value={form.tecnologiaImplSugeridaId} onChange={(e) => setForm({ ...form, tecnologiaImplSugeridaId: e.target.value })}>
             <option value="">— Ninguna —</option>
             {tecnologias.map((t) => <option key={t.id} value={t.id}>{t.grupo_nombre} · {t.nombre}</option>)}
           </select>
-        </div>
+        </Field>
       </div>
       <div className="row">
         <Button onClick={guardar} disabled={guardando}>{guardando ? 'Guardando...' : 'Guardar'}</Button>

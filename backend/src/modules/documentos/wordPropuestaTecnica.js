@@ -1,44 +1,13 @@
 import {
-  Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, Header, Footer,
-  ImageRun, AlignmentType, HeadingLevel, WidthType, ShadingType, PageNumber,
+  Document, Packer, Paragraph, TextRun, Table, TableRow, Header, Footer,
+  ImageRun, AlignmentType, WidthType, ShadingType, PageNumber,
 } from 'docx';
 import { LOGO_BUFFER } from '../../assets/logoNetmask.js';
+import { NM, FONT, crearContadorSecciones, parrafo, subtitulo, bullet, celda } from './wordStyles.js';
 
 // Formato adaptado del pulido visual de una oferta técnica real (portada de marca,
 // encabezado corrido, secciones numeradas), SIN sus tablas de precio — esta
 // Propuesta Técnica sigue sin precios ni horas de esfuerzo, por diseño.
-const NM = { dark: '07182D', light: '0094CE', textDark: '222222', white: 'FFFFFF', grayBg: 'F2F2F2' };
-const FONT = 'Calibri';
-
-let seccionActual = 0;
-function tituloSeccion(texto) {
-  seccionActual += 1;
-  const numero = String(seccionActual).padStart(2, '0');
-  return new Paragraph({
-    heading: HeadingLevel.HEADING_1,
-    spacing: { before: 300, after: 150 },
-    children: [
-      new TextRun({ text: `${numero} — `, bold: true, color: NM.light, font: FONT, size: 28 }),
-      new TextRun({ text: texto.toUpperCase(), bold: true, color: NM.dark, font: FONT, size: 28 }),
-    ],
-  });
-}
-function parrafo(texto) {
-  return new Paragraph({ spacing: { after: 120 }, children: [new TextRun({ text: texto, font: FONT, size: 22, color: NM.textDark })] });
-}
-function subtitulo(texto) {
-  return new Paragraph({ spacing: { before: 150, after: 80 }, children: [new TextRun({ text: texto, bold: true, font: FONT, size: 23, color: NM.light })] });
-}
-function bullet(texto) {
-  return new Paragraph({ bullet: { level: 0 }, spacing: { after: 60 }, children: [new TextRun({ text: texto, font: FONT, size: 21, color: NM.textDark })] });
-}
-function celda(texto, opts = {}) {
-  return new TableCell({
-    width: opts.width ? { size: opts.width, type: WidthType.PERCENTAGE } : undefined,
-    shading: opts.bg ? { type: ShadingType.SOLID, fill: opts.bg } : undefined,
-    children: [new Paragraph({ children: [new TextRun({ text: String(texto ?? '—'), font: FONT, size: 20, bold: !!opts.bold, color: opts.color || NM.textDark })] })],
-  });
-}
 
 function nombreComponentes({ hardwareItems, cotizacion, especificacion }) {
   const partes = [];
@@ -51,7 +20,7 @@ function nombreComponentes({ hardwareItems, cotizacion, especificacion }) {
 }
 
 export async function generarWordPropuestaTecnica({ bom, cliente, hardwareItems, cotizacion, especificacion, tipoServicio }) {
-  seccionActual = 0;
+  const tituloSeccion = crearContadorSecciones();
 
   const encabezadoCorrido = new Header({
     children: [new Paragraph({

@@ -1,8 +1,10 @@
 import { query } from '../../db/pool.js';
 import { HttpError } from '../../middlewares/errorHandler.js';
+import { ROLES_VISIBILIDAD_AMPLIADA } from '../../shared/roles.js';
 import * as bomsService from '../boms/boms.service.js';
 import * as cotizacionImplService from '../cotizaciones/cotizacionImpl.service.js';
 import * as especificacionesService from '../especificaciones/especificaciones.service.js';
+import * as catalogoServiciosService from '../catalogo-servicios/catalogoServicios.service.js';
 import { generarExcelCotizacion } from './excelCotizacion.js';
 import { generarExcelBom } from './excelBom.js';
 import { generarWordEspecificacion } from './wordEspecificacion.js';
@@ -12,22 +14,28 @@ const XLSX_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.spreads
 const DOCX_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
 async function cargarContextoBom(bomId, user) {
-  const bom = await bomsService.getBom(bomId, user);
-  const { rows: clienteRows } = await query('SELECT * FROM clientes WHERE id = $1', [bom.cliente_id]);
-  const { rows: hardwareItems } = await query(
-    `SELECT bhi.*, ch.nombre, ch.marca, ch.sku, ch.descripcion, ch.moneda, bhi.cantidad * bhi.precio_unitario_snapshot AS subtotal
-     FROM bom_hardware_items bhi JOIN catalogo_hardware ch ON ch.id = bhi.hardware_id
-     WHERE bhi.bom_id = $1 ORDER BY bhi.id`,
-    [bomId]
-  );
-  const cotizacion = await cotizacionImplService.getCotizacion(bomId);
-  const especificacion = await especificacionesService.getEspecificacion(bomId);
+  // bom/hardwareItems/cotizacion/especificacion solo dependen de bomId (ya
+  // conocido), no unas de otras -- se piden en paralelo en vez de en serie.
+  const [bom, { rows: hardwareItems }, cotizacion, especificacion] = await Promise.all([
+    bomsService.getBom(bomId, user),
+    query(
+      `SELECT bhi.*, ch.nombre, ch.marca, ch.sku, ch.descripcion, ch.moneda, bhi.cantidad * bhi.precio_unitario_snapshot AS subtotal
+       FROM bom_hardware_items bhi JOIN catalogo_hardware ch ON ch.id = bhi.hardware_id
+       WHERE bhi.bom_id = $1 ORDER BY bhi.id`,
+      [bomId]
+    ),
+    cotizacionImplService.getCotizacion(bomId),
+    especificacionesService.getEspecificacion(bomId),
+  ]);
 
-  let tipoServicio = null;
-  if (especificacion) {
-    const { rows } = await query('SELECT * FROM catalogo_serv_tipos WHERE id = $1', [especificacion.tipo_servicio_id]);
-    tipoServicio = rows[0];
-  }
+  // cliente depende de bom.cliente_id y tipoServicio de especificacion --
+  // ambas ya resueltas arriba, pero siguen siendo independientes entre si.
+  const [{ rows: clienteRows }, tipoServicio] = await Promise.all([
+    query('SELECT * FROM clientes WHERE id = $1', [bom.cliente_id]),
+    especificacion
+      ? query('SELECT * FROM catalogo_serv_tipos WHERE id = $1', [especificacion.tipo_servicio_id]).then((r) => r.rows[0])
+      : Promise.resolve(null),
+  ]);
 
   return { bom, cliente: clienteRows[0], hardwareItems, cotizacion, especificacion, tipoServicio };
 }
@@ -52,7 +60,7 @@ export async function generarExcelCotizacionDoc(bomId, user) {
 export async function generarWordEspecificacionDoc(bomId, user) {
   const ctx = await cargarContextoBom(bomId, user);
   if (!ctx.especificacion) throw new HttpError(404, 'Este BOM no tiene componente de Servicios Netmask');
-  const { rows: severidadesCatalogo } = await query('SELECT * FROM catalogo_serv_severidades');
+  const severidadesCatalogo = await catalogoServiciosService.listSeveridades();
   const buffer = await generarWordEspecificacion({ ...ctx, severidadesCatalogo });
   const nombreArchivo = `Especificacion_${ctx.bom.nombre}.docx`.replace(/\s+/g, '_');
   return guardarDocumento({ bomId, tipo: 'word_especificacion', nombreArchivo, contentType: DOCX_CONTENT_TYPE, buffer, userId: user.id });
@@ -77,8 +85,6 @@ export async function generarWordPropuestaTecnicaDoc(bomId, user) {
   const nombreArchivo = `Propuesta_Tecnica_${ctx.bom.nombre}.docx`.replace(/\s+/g, '_');
   return guardarDocumento({ bomId, tipo: 'word_propuesta_tecnica', nombreArchivo, contentType: DOCX_CONTENT_TYPE, buffer, userId: user.id });
 }
-
-const ROLES_VISIBILIDAD_AMPLIADA = ['superadmin', 'gerencia'];
 
 export async function listarDocumentosGlobal(user, { tipo } = {}) {
   const verTodos = ROLES_VISIBILIDAD_AMPLIADA.includes(user.rolClave);

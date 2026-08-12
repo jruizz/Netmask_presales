@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import * as hardwareItemsService from './hardwareItems.service.js';
-import * as bomsService from './boms.service.js';
+import { assertBomAccess } from './bomAccess.js';
 import { authMiddleware } from '../../middlewares/authMiddleware.js';
 import { requirePermiso } from '../../middlewares/roleGuard.js';
 
@@ -13,10 +13,6 @@ const agregarSchema = z.object({
   cantidad: z.number().int().positive().default(1),
 });
 const actualizarSchema = z.object({ cantidad: z.number().int().positive() });
-
-async function assertBomAccess(req) {
-  await bomsService.getBom(req.params.bomId, req.user);
-}
 
 hardwareItemsRouter.get('/', requirePermiso('ver'), async (req, res, next) => {
   try {

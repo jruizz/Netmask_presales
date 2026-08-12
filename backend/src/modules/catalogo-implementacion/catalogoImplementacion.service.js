@@ -35,19 +35,19 @@ async function resolverGrupo(client, marcaId, grupoNombre) {
 }
 
 export async function listTecnologias() {
-  const { rows: tecnologias } = await query(
-    `SELECT t.id, t.nombre, t.es_base, t.activo,
-            g.id AS grupo_id, g.nombre AS grupo_nombre,
-            m.id AS marca_id, m.nombre AS marca_nombre
-     FROM catalogo_impl_tecnologias t
-     JOIN catalogo_impl_grupos g ON g.id = t.grupo_id
-     JOIN catalogo_impl_marcas m ON m.id = g.marca_id
-     WHERE t.activo = true
-     ORDER BY m.nombre, g.nombre, t.nombre`
-  );
-  const { rows: actividades } = await query(
-    `SELECT * FROM catalogo_impl_actividades ORDER BY tecnologia_id, orden`
-  );
+  const [{ rows: tecnologias }, { rows: actividades }] = await Promise.all([
+    query(
+      `SELECT t.id, t.nombre, t.es_base, t.activo,
+              g.id AS grupo_id, g.nombre AS grupo_nombre,
+              m.id AS marca_id, m.nombre AS marca_nombre
+       FROM catalogo_impl_tecnologias t
+       JOIN catalogo_impl_grupos g ON g.id = t.grupo_id
+       JOIN catalogo_impl_marcas m ON m.id = g.marca_id
+       WHERE t.activo = true
+       ORDER BY m.nombre, g.nombre, t.nombre`
+    ),
+    query('SELECT * FROM catalogo_impl_actividades ORDER BY tecnologia_id, orden'),
+  ]);
   const actividadesPorTecnologia = {};
   actividades.forEach((a) => {
     (actividadesPorTecnologia[a.tecnologia_id] ||= []).push(a);

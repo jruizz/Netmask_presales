@@ -6,6 +6,9 @@ const GRIS_CLARO = 'FFF2F2F2';
 const CELESTE_TOTAL = 'FFD6EFFA';
 const BORDE_GRIS = { style: 'thin', color: { argb: 'FF9AA5B1' } };
 
+export const NUMFMT_ENTERO = '#,##0';
+export const NUMFMT_DECIMAL = '#,##0.00';
+
 const EXCLUSIONES_IMPL = [
   'Instalación de cableado estructurado o adecuaciones eléctricas',
   'Suministro de hardware, licenciamiento o renovaciones no especificadas',
@@ -83,21 +86,21 @@ export function escribirViaticosPorSede(ws, r, viaticosPorSede) {
     const row = ws.getRow(r);
     row.getCell(1).value = s.nombre;
     row.getCell(2).value = s.totalViaticos;
-    row.getCell(2).numFmt = '#,##0';
+    row.getCell(2).numFmt = NUMFMT_ENTERO;
     row.getCell(3).value = s.totalViaticosPorVisita;
-    row.getCell(3).numFmt = '#,##0';
+    row.getCell(3).numFmt = NUMFMT_ENTERO;
     row.getCell(4).value = s.cantIngenieros;
     row.getCell(5).value = s.vuelos;
-    row.getCell(5).numFmt = '#,##0';
+    row.getCell(5).numFmt = NUMFMT_ENTERO;
     row.getCell(6).value = s.tiempoEnSitio;
     row.getCell(7).value = s.alimentacion;
-    row.getCell(7).numFmt = '#,##0';
+    row.getCell(7).numFmt = NUMFMT_ENTERO;
     row.getCell(8).value = s.hospedaje;
-    row.getCell(8).numFmt = '#,##0';
+    row.getCell(8).numFmt = NUMFMT_ENTERO;
     row.getCell(9).value = s.transporteInterno;
-    row.getCell(9).numFmt = '#,##0';
+    row.getCell(9).numFmt = NUMFMT_ENTERO;
     row.getCell(10).value = s.transporteAeropuerto;
-    row.getCell(10).numFmt = '#,##0';
+    row.getCell(10).numFmt = NUMFMT_ENTERO;
     row.getCell(11).value = s.esLocal ? 'Sí' : 'No';
     bordePorFila(row, 1, 11);
     r++;
@@ -106,7 +109,7 @@ export function escribirViaticosPorSede(ws, r, viaticosPorSede) {
   const totalRow = ws.getRow(r);
   totalRow.getCell(1).value = 'Total viáticos';
   totalRow.getCell(2).value = viaticosPorSede.reduce((t, s) => t + s.totalViaticos, 0);
-  totalRow.getCell(2).numFmt = '#,##0';
+  totalRow.getCell(2).numFmt = NUMFMT_ENTERO;
   bordePorFila(totalRow, 1, 2);
   estiloTotal(totalRow.getCell(1));
   estiloTotal(totalRow.getCell(2));
@@ -139,7 +142,7 @@ export function escribirDetalleCotizacion(ws, r, cotizacion, { tarifa } = {}) {
     const row = ws.getRow(r);
     row.getCell(1).value = block.titulo;
     row.getCell(4).value = block.subtotalHoras;
-    if (conCosto) { row.getCell(6).value = block.subtotalHoras * tarifa; row.getCell(6).numFmt = '#,##0'; }
+    if (conCosto) { row.getCell(6).value = block.subtotalHoras * tarifa; row.getCell(6).numFmt = NUMFMT_ENTERO; }
     row.eachCell({ includeEmpty: true }, (cell, colNum) => {
       if (colNum > colFin) return;
       cell.font = { bold: true };
@@ -154,7 +157,7 @@ export function escribirDetalleCotizacion(ws, r, cotizacion, { tarifa } = {}) {
       row2.getCell(3).value = it.horas;
       row2.getCell(4).value = it.cantidad * it.horas;
       row2.getCell(5).value = it.modo === 'en_sitio' ? 'En sitio' : 'Remota';
-      if (conCosto) { row2.getCell(6).value = it.cantidad * it.horas * tarifa; row2.getCell(6).numFmt = '#,##0'; }
+      if (conCosto) { row2.getCell(6).value = it.cantidad * it.horas * tarifa; row2.getCell(6).numFmt = NUMFMT_ENTERO; }
       bordePorFila(row2, 1, colFin);
       r++;
     });
@@ -163,7 +166,7 @@ export function escribirDetalleCotizacion(ws, r, cotizacion, { tarifa } = {}) {
   const pmRow = ws.getRow(r);
   pmRow.getCell(1).value = detalle.pmHoras > 0 ? 'Gerencia de Proyectos (8%, >24h)' : 'Gerencia de Proyectos (no aplica, ≤24h)';
   pmRow.getCell(4).value = detalle.pmHoras;
-  if (conCosto) { pmRow.getCell(6).value = detalle.pmHoras * tarifa; pmRow.getCell(6).numFmt = '#,##0'; }
+  if (conCosto) { pmRow.getCell(6).value = detalle.pmHoras * tarifa; pmRow.getCell(6).numFmt = NUMFMT_ENTERO; }
   bordePorFila(pmRow, 1, colFin);
   pmRow.eachCell({ includeEmpty: true }, (cell, colNum) => { if (colNum <= colFin) cell.font = { italic: true }; });
   r += 2;
@@ -174,7 +177,7 @@ export function escribirDetalleCotizacion(ws, r, cotizacion, { tarifa } = {}) {
   r++;
   ws.getCell(r, 1).value = 'Viáticos';
   ws.getCell(r, 2).value = Number(cotizacion.resultado.viaticos_cop);
-  ws.getCell(r, 2).numFmt = '#,##0';
+  ws.getCell(r, 2).numFmt = NUMFMT_ENTERO;
   r++;
 
   if (cotizacion.modo === 'epsp') {
@@ -189,11 +192,11 @@ export function escribirDetalleCotizacion(ws, r, cotizacion, { tarifa } = {}) {
   } else {
     ws.getCell(r, 1).value = 'Costo de ingeniería';
     ws.getCell(r, 2).value = Number(cotizacion.resultado.costo_ingenieria_cop);
-    ws.getCell(r, 2).numFmt = '#,##0';
+    ws.getCell(r, 2).numFmt = NUMFMT_ENTERO;
     r++;
     ws.getCell(r, 1).value = 'TOTAL NETMASK (COP)';
     ws.getCell(r, 2).value = Number(cotizacion.resultado.total_cop);
-    ws.getCell(r, 2).numFmt = '#,##0';
+    ws.getCell(r, 2).numFmt = NUMFMT_ENTERO;
   }
   for (let i = totalesInicio; i <= r; i++) {
     const esGranTotal = i === r;

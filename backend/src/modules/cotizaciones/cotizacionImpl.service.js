@@ -1,15 +1,21 @@
 import { query, pool } from '../../db/pool.js';
 import { HttpError } from '../../middlewares/errorHandler.js';
+import { crearTransiciones, ESTADOS_EDITABLES } from '../../shared/aprobacionWorkflow.js';
+import * as catalogoImplementacionService from '../catalogo-implementacion/catalogoImplementacion.service.js';
 import * as calcEngine from './calcEngine.js';
 
+// Antes reimplementaba aqui mismo las queries de bloques fijos/parametros/
+// tarifas/rangos de site survey, en vez de reusar las funciones que ya
+// existen (y se mantienen) en catalogoImplementacion.service.js -- la copia
+// de site-survey-rangos incluso habia perdido el ORDER BY orden.
 async function cargarContextoCatalogo() {
-  const [{ rows: tecnologias }, { rows: actividades }, { rows: bloquesFijos }, { rows: parametros }, { rows: tarifas }, { rows: rangos }] = await Promise.all([
+  const [{ rows: tecnologias }, { rows: actividades }, bloquesFijos, params, tarifasPorCondicion, rangos] = await Promise.all([
     query('SELECT * FROM catalogo_impl_tecnologias WHERE activo = true'),
     query('SELECT * FROM catalogo_impl_actividades ORDER BY tecnologia_id, orden'),
-    query('SELECT * FROM catalogo_impl_bloques_fijos ORDER BY tipo, orden'),
-    query('SELECT clave, valor FROM catalogo_impl_parametros'),
-    query('SELECT nivel, condicion, tarifa_cop_hora FROM catalogo_impl_tarifas'),
-    query('SELECT * FROM catalogo_impl_site_survey_rangos'),
+    catalogoImplementacionService.getBloquesFijos(),
+    catalogoImplementacionService.getParametros(),
+    catalogoImplementacionService.getTarifas(),
+    catalogoImplementacionService.getSiteSurveyRangos(),
   ]);
 
   const tecnologiasById = {};
@@ -17,12 +23,6 @@ async function cargarContextoCatalogo() {
 
   const actividadesPorTecnologia = {};
   actividades.forEach((a) => { (actividadesPorTecnologia[a.tecnologia_id] ||= []).push(a); });
-
-  const params = {};
-  parametros.forEach((p) => { params[p.clave] = Number(p.valor); });
-
-  const tarifasPorCondicion = { interno: {}, aliado: {} };
-  tarifas.forEach((t) => { tarifasPorCondicion[t.condicion][t.nivel] = Number(t.tarifa_cop_hora); });
 
   const rangosById = {};
   rangos.forEach((r) => { rangosById[r.id] = r; });
@@ -43,8 +43,6 @@ function mapSedeEntrada(s) {
     esLocal: !!s.esLocal,
   };
 }
-
-const ESTADOS_EDITABLES = ['borrador', 'rechazado'];
 
 export async function getCotizacion(bomId) {
   const { rows } = await query('SELECT * FROM cotizaciones_impl WHERE bom_id = $1', [bomId]);
@@ -176,6 +174,9 @@ export async function upsertYCalcular(bomId, data, userId) {
       });
     } else {
       const tarifa = catalogo.tarifasPorCondicion[condicion][nivelIngenieria];
+      if (tarifa === undefined) {
+        throw new HttpError(400, `No existe una tarifa configurada para nivel ${nivelIngenieria} / condición "${condicion}"`);
+      }
       const tarifaNivel2 = catalogo.tarifasPorCondicion[condicion][2];
       resultado = calcEngine.recalcularNetmask({
         params: catalogo.params,
@@ -226,18 +227,13 @@ export async function eliminarCotizacion(bomId) {
 }
 
 // ── Aprobacion (solo relevante cuando requiere_aprobacion = true; ver 11_aprobacion_implementacion.sql) ──
-async function transicionar(bomId, { estadosPermitidos, estadoNuevo, userId, comentario }) {
-  const existente = await getCotizacion(bomId);
-  if (!existente) throw new HttpError(404, 'Este BOM no tiene componente de Implementación');
-  if (!existente.requiere_aprobacion) {
-    throw new HttpError(409, 'Esta cotización no requiere aprobación (el checkbox está desactivado)');
-  }
-  if (!estadosPermitidos.includes(existente.estado)) {
-    throw new HttpError(409, `No se puede pasar a "${estadoNuevo}" desde el estado actual "${existente.estado}"`);
-  }
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
+export const {
+  enviarRevisionLider, aprobarLider, enviarRevisionGerencia, aprobarGerencia, rechazar, marcarGenerado,
+} = crearTransiciones({
+  obtenerEntidad: getCotizacion,
+  entidadNoEncontrada: 'Este BOM no tiene componente de Implementación',
+  requiereFlagAprobacion: true,
+  aplicarTransicion: async (client, { existente, bomId, estadoNuevo, userId, comentario }) => {
     await client.query(
       'UPDATE cotizaciones_impl SET estado = $1, actualizado_en = now() WHERE bom_id = $2',
       [estadoNuevo, bomId]
@@ -247,30 +243,5 @@ async function transicionar(bomId, { estadosPermitidos, estadoNuevo, userId, com
        VALUES ($1, $2, $3, $4, $5)`,
       [existente.id, existente.estado, estadoNuevo, userId, comentario || null]
     );
-    await client.query('COMMIT');
-  } catch (err) {
-    await client.query('ROLLBACK');
-    throw err;
-  } finally {
-    client.release();
-  }
-  return getCotizacion(bomId);
-}
-
-export const enviarRevisionLider = (bomId, userId) =>
-  transicionar(bomId, { estadosPermitidos: ['borrador', 'rechazado'], estadoNuevo: 'revision_lider', userId });
-
-export const aprobarLider = (bomId, userId, comentario) =>
-  transicionar(bomId, { estadosPermitidos: ['revision_lider'], estadoNuevo: 'aprobado_lider', userId, comentario });
-
-export const enviarRevisionGerencia = (bomId, userId) =>
-  transicionar(bomId, { estadosPermitidos: ['aprobado_lider'], estadoNuevo: 'revision_gerencia', userId });
-
-export const aprobarGerencia = (bomId, userId, comentario) =>
-  transicionar(bomId, { estadosPermitidos: ['revision_gerencia'], estadoNuevo: 'aprobado', userId, comentario });
-
-export const rechazar = (bomId, userId, comentario) =>
-  transicionar(bomId, { estadosPermitidos: ['revision_lider', 'revision_gerencia'], estadoNuevo: 'rechazado', userId, comentario });
-
-export const marcarGenerado = (bomId, userId) =>
-  transicionar(bomId, { estadosPermitidos: ['aprobado'], estadoNuevo: 'generado', userId });
+  },
+});

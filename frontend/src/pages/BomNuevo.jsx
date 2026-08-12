@@ -4,6 +4,8 @@ import { useAuth } from '../store/AuthContext.jsx';
 import { apiFetch } from '../services/api.js';
 import PageHeader from '../components/PageHeader.jsx';
 import Button from '../components/Button.jsx';
+import ComercialSelect from '../components/ComercialSelect.jsx';
+import Field from '../components/Field.jsx';
 
 export default function BomNuevo() {
   const { token } = useAuth();
@@ -60,42 +62,34 @@ export default function BomNuevo() {
     }
   }
 
-  const comercialesOT = comerciales.filter((c) => c.sector === 'OT');
-  const comercialesIT = comerciales.filter((c) => c.sector === 'IT');
-  const comercialesMixto = comerciales.filter((c) => c.sector === 'IT/OT');
-
   return (
     <div className="content" style={{ maxWidth: 560 }}>
       <PageHeader back="/" title="Nuevo BOM" subtitle="Elige o crea el cliente, asigna un comercial y dale un nombre al proyecto." />
 
       <form onSubmit={handleSubmit} className="card">
-        <div className="field">
-          <label>Nombre del proyecto</label>
+        <Field label="Nombre del proyecto">
           <input className="input" value={nombre} onChange={(e) => setNombre(e.target.value)} required autoFocus />
-        </div>
+        </Field>
 
         {!creandoCliente ? (
-          <div className="field">
-            <label>Cliente</label>
+          <Field label="Cliente">
             <select className="input" value={clienteId} onChange={(e) => setClienteId(e.target.value)}>
               <option value="">-- Selecciona un cliente --</option>
               {clientes.map((c) => (
                 <option key={c.id} value={c.id}>{c.nombre_cliente}</option>
               ))}
             </select>
-          </div>
+          </Field>
         ) : (
           <>
-            <div className="field">
-              <label>Nombre del cliente</label>
+            <Field label="Nombre del cliente">
               <input className="input" value={nuevoCliente.nombreCliente}
                 onChange={(e) => setNuevoCliente({ ...nuevoCliente, nombreCliente: e.target.value })} required />
-            </div>
-            <div className="field">
-              <label>Sector</label>
+            </Field>
+            <Field label="Sector">
               <input className="input" value={nuevoCliente.sector}
                 onChange={(e) => setNuevoCliente({ ...nuevoCliente, sector: e.target.value })} placeholder="Ej. Industrial, Financiero, Retail..." />
-            </div>
+            </Field>
           </>
         )}
         <button type="button" onClick={() => setCreandoCliente(!creandoCliente)}
@@ -103,39 +97,19 @@ export default function BomNuevo() {
           {creandoCliente ? '← Elegir un cliente existente' : '+ Crear un cliente nuevo'}
         </button>
 
-        <div className="field">
-          <label>Comercial asociado</label>
-          <select className="input" value={comercialId} onChange={(e) => setComercialId(e.target.value)} required>
-            <option value="">-- Selecciona --</option>
-            {comercialesOT.length > 0 && (
-              <optgroup label="OT">
-                {comercialesOT.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-              </optgroup>
-            )}
-            {comercialesIT.length > 0 && (
-              <optgroup label="IT">
-                {comercialesIT.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-              </optgroup>
-            )}
-            {comercialesMixto.length > 0 && (
-              <optgroup label="IT/OT">
-                {comercialesMixto.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-              </optgroup>
-            )}
-          </select>
-        </div>
+        <Field label="Comercial asociado">
+          <ComercialSelect comerciales={comerciales} value={comercialId} onChange={(e) => setComercialId(e.target.value)} required />
+        </Field>
 
-        <div className="field">
-          <label>Ubicación del proyecto</label>
+        <Field label="Ubicación del proyecto">
           <input className="input" value={ubicacionProyecto} onChange={(e) => setUbicacionProyecto(e.target.value)} required
             placeholder="Ej. Planta Rionegro, Sede principal Bogotá..." />
-        </div>
+        </Field>
 
-        <div className="field">
-          <label>ID de la oportunidad <span className="muted">(opcional)</span></label>
+        <Field label={<>ID de la oportunidad <span className="muted">(opcional)</span></>}>
           <input className="input" value={idOportunidad} onChange={(e) => setIdOportunidad(e.target.value)}
             placeholder="Ej. OP-5309" />
-        </div>
+        </Field>
 
         {error && <div className="alert alert-danger">{error}</div>}
         <Button type="submit" block disabled={loading}>{loading ? 'Creando...' : 'Crear BOM'}</Button>

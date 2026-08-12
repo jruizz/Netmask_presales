@@ -7,13 +7,8 @@ import Card from '../components/Card.jsx';
 import Button from '../components/Button.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import { IconLibrary, IconDownload } from '../components/icons.jsx';
-
-const TIPOS_DOCUMENTO = {
-  excel_cotizacion: 'Excel — Cotización de Implementación',
-  word_especificacion: 'Word — Especificación de Servicio',
-  excel_bom: 'Excel — BOM consolidado',
-  word_propuesta_tecnica: 'Word — Propuesta Técnica',
-};
+import { TIPOS_DOCUMENTO } from '../constants/documentos.js';
+import Field from '../components/Field.jsx';
 
 export default function Biblioteca() {
   const { token } = useAuth();
@@ -34,13 +29,12 @@ export default function Biblioteca() {
     <div className="content content-wide">
       <PageHeader title="Biblioteca de documentos" subtitle="Todos los Excel y Word generados, con acceso según tu rol." />
 
-      <div className="field" style={{ maxWidth: 320, marginBottom: 16 }}>
-        <label>Filtrar por tipo</label>
+      <Field label="Filtrar por tipo" style={{ maxWidth: 320, marginBottom: 16 }}>
         <select className="input" value={tipo} onChange={(e) => setTipo(e.target.value)}>
           <option value="">Todos</option>
           {Object.entries(TIPOS_DOCUMENTO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
-      </div>
+      </Field>
 
       {error && <div className="alert alert-danger">{error}</div>}
 

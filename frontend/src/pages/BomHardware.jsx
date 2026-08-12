@@ -7,8 +7,8 @@ import Card from '../components/Card.jsx';
 import Button from '../components/Button.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import { IconBox, IconTrash, IconPlus } from '../components/icons.jsx';
-
-const money = (n) => Number(n).toLocaleString('es-CO', { maximumFractionDigits: 0 });
+import { formatMoney as money } from '../utils/format.js';
+import Field from '../components/Field.jsx';
 
 export default function BomHardware() {
   const { id } = useParams();
@@ -98,10 +98,9 @@ export default function BomHardware() {
       {error && <div className="alert alert-danger">{error}</div>}
 
       <Card className="stack" style={{ marginBottom: 20 }}>
-        <div className="field" style={{ marginBottom: resultados.length ? 10 : 0 }}>
-          <label>Buscar en el catálogo (nombre, SKU o número de parte)</label>
+        <Field label="Buscar en el catálogo (nombre, SKU o número de parte)" style={{ marginBottom: resultados.length ? 10 : 0 }}>
           <input className="input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ej. FortiGate 60F" />
-        </div>
+        </Field>
         {resultados.length > 0 && (
           <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 10px' }}>
             {resultados.map((r) => (
@@ -121,33 +120,27 @@ export default function BomHardware() {
         {creandoNuevo && (
           <form onSubmit={crearYAgregar} style={{ marginTop: 14 }}>
             <div className="form-grid">
-              <div className="field">
-                <label>Nombre</label>
+              <Field label="Nombre">
                 <input className="input" required value={nuevoItem.nombre} onChange={(e) => setNuevoItem({ ...nuevoItem, nombre: e.target.value })} />
-              </div>
-              <div className="field">
-                <label>Marca</label>
+              </Field>
+              <Field label="Marca">
                 <input className="input" value={nuevoItem.marca} onChange={(e) => setNuevoItem({ ...nuevoItem, marca: e.target.value })} placeholder="Ej. Fortinet, Cisco..." />
-              </div>
-              <div className="field">
-                <label>SKU / número de parte</label>
+              </Field>
+              <Field label="SKU / número de parte">
                 <input className="input" value={nuevoItem.sku} onChange={(e) => setNuevoItem({ ...nuevoItem, sku: e.target.value })} />
-              </div>
-              <div className="field" style={{ gridColumn: '1 / -1' }}>
-                <label>Descripción</label>
+              </Field>
+              <Field label="Descripción" style={{ gridColumn: '1 / -1' }}>
                 <input className="input" value={nuevoItem.descripcion} onChange={(e) => setNuevoItem({ ...nuevoItem, descripcion: e.target.value })} />
-              </div>
-              <div className="field">
-                <label>Precio</label>
+              </Field>
+              <Field label="Precio">
                 <input className="input" type="number" min="0" step="0.01" required value={nuevoItem.precio} onChange={(e) => setNuevoItem({ ...nuevoItem, precio: e.target.value })} />
-              </div>
-              <div className="field">
-                <label>Moneda</label>
+              </Field>
+              <Field label="Moneda">
                 <select className="input" value={nuevoItem.moneda} onChange={(e) => setNuevoItem({ ...nuevoItem, moneda: e.target.value })}>
                   <option value="COP">COP</option>
                   <option value="USD">USD</option>
                 </select>
-              </div>
+              </Field>
             </div>
             <Button type="submit">Crear y agregar al BOM</Button>
           </form>

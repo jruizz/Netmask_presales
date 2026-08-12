@@ -158,6 +158,28 @@ button { font-family: inherit; }
 .card-title { font-size: 15px; margin-bottom: 4px; }
 .card-subtitle { color: var(--nm-text-muted); font-size: 13px; margin-bottom: 14px; }
 
+/* Card colapsable (<details> con className="card") -- ver troubleshooting
+   agosto 2026: reduce contaminacion visual en formularios largos (Servicios). */
+details.card > summary.card-summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+details.card > summary.card-summary::-webkit-details-marker { display: none; }
+.card-summary-chevron {
+  display: inline-flex;
+  margin-right: 8px;
+  color: var(--nm-text-muted);
+  transition: transform .15s ease;
+  flex-shrink: 0;
+}
+details.card[open] > summary.card-summary .card-summary-chevron { transform: rotate(90deg); }
+details.card > summary.card-summary .card-subtitle { margin: 4px 0 0; }
+details.card > .card-details-body { margin-top: 14px; }
+
 .grid { display: grid; gap: 16px; }
 .grid-3 { grid-template-columns: repeat(3, 1fr); }
 .grid-2 { grid-template-columns: repeat(2, 1fr); }

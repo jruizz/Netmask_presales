@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext.jsx';
 import Button from '../components/Button.jsx';
+import Field from '../components/Field.jsx';
 import logo from '../assets/logo.png';
 
 export default function Login() {
@@ -43,12 +44,10 @@ export default function Login() {
           Plataforma de Preventa
         </p>
 
-        <div className="field">
-          <label>Correo</label>
+        <Field label="Correo">
           <input className="input" type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} required autoFocus />
-        </div>
-        <div className="field">
-          <label>Contraseña</label>
+        </Field>
+        <Field label="Contraseña">
           <input
             className="input"
             type="password"
@@ -56,7 +55,7 @@ export default function Login() {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
-        </div>
+        </Field>
 
         {error && <div className="alert alert-danger">{error}</div>}
 

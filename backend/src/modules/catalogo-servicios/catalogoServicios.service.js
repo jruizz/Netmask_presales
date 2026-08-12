@@ -1,8 +1,10 @@
 import { query } from '../../db/pool.js';
 
 export async function listTipos() {
-  const { rows: tipos } = await query('SELECT * FROM catalogo_serv_tipos WHERE activo = true ORDER BY nombre');
-  const { rows: niveles } = await query('SELECT * FROM catalogo_serv_escalamiento_niveles ORDER BY plantilla_id, orden');
+  const [{ rows: tipos }, { rows: niveles }] = await Promise.all([
+    query('SELECT * FROM catalogo_serv_tipos WHERE activo = true ORDER BY nombre'),
+    query('SELECT * FROM catalogo_serv_escalamiento_niveles ORDER BY plantilla_id, orden'),
+  ]);
   const nivelesPorPlantilla = {};
   niveles.forEach((n) => { (nivelesPorPlantilla[n.plantilla_id] ||= []).push(n); });
   return tipos.map((t) => ({

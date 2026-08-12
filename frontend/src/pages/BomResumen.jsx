@@ -7,27 +7,14 @@ import Button from '../components/Button.jsx';
 import Badge from '../components/Badge.jsx';
 import Card from '../components/Card.jsx';
 import EmptyState from '../components/EmptyState.jsx';
+import ComercialSelect from '../components/ComercialSelect.jsx';
 import { IconBox, IconWrench, IconShield, IconDownload, IconLibrary } from '../components/icons.jsx';
+import { ESTADOS_LABEL, ESTADOS_BADGE } from '../constants/estados.js';
+import { TIPOS_DOCUMENTO } from '../constants/documentos.js';
+import { formatMoney as money } from '../utils/format.js';
+import Field from '../components/Field.jsx';
 
-const money = (n) => Number(n).toLocaleString('es-CO', { maximumFractionDigits: 0 });
-
-const TIPOS_DOCUMENTO = {
-  excel_cotizacion: 'Excel — Cotización de Implementación',
-  word_especificacion: 'Word — Especificación de Servicio',
-  excel_bom: 'Excel — BOM consolidado',
-  word_propuesta_tecnica: 'Word — Propuesta Técnica',
-};
-
-const ESTADO_ESPEC_BADGE = {
-  borrador: 'neutral', revision_lider: 'warning', aprobado_lider: 'info',
-  revision_gerencia: 'warning', aprobado: 'success', generado: 'success', rechazado: 'danger',
-};
-const ESTADO_ESPEC_LABEL = {
-  borrador: 'Borrador', revision_lider: 'En revisión (Líder)', aprobado_lider: 'Aprobado (Líder)',
-  revision_gerencia: 'En revisión (Gerencia)', aprobado: 'Aprobado', generado: 'Generado', rechazado: 'Rechazado',
-};
-
-function ComponentCard({ icon: Icon, title, description, included, status, to, resumen }) {
+function ComponentCard({ icon: Icon, title, description, included, status, badgeVariant, to, resumen }) {
   return (
     <div className="card">
       <div className="row" style={{ marginBottom: 10 }}>
@@ -41,7 +28,7 @@ function ComponentCard({ icon: Icon, title, description, included, status, to, r
       </div>
       <p className="text-sm muted" style={{ minHeight: 38 }}>{description}</p>
       <div style={{ marginBottom: 14 }}>
-        <Badge variant={included ? 'success' : 'neutral'}>{status}</Badge>
+        <Badge variant={badgeVariant || (included ? 'success' : 'neutral')}>{status}</Badge>
       </div>
       {included && resumen && (
         <details style={{ marginBottom: 14 }}>
@@ -230,10 +217,6 @@ export default function BomResumen() {
     </div>
   );
 
-  const comercialesOT = comerciales.filter((c) => c.sector === 'OT');
-  const comercialesIT = comerciales.filter((c) => c.sector === 'IT');
-  const comercialesMixto = comerciales.filter((c) => c.sector === 'IT/OT');
-
   return (
     <div className="content">
       <PageHeader
@@ -252,45 +235,23 @@ export default function BomResumen() {
       >
         {editandoDetalles ? (
           <>
-            <div className="field">
-              <label>Nombre del proyecto</label>
+            <Field label="Nombre del proyecto">
               <input className="input" value={detalles.nombre} onChange={(e) => setDetalles({ ...detalles, nombre: e.target.value })} />
-            </div>
-            <div className="field">
-              <label>Cliente</label>
+            </Field>
+            <Field label="Cliente">
               <select className="input" value={detalles.clienteId} onChange={(e) => setDetalles({ ...detalles, clienteId: e.target.value })}>
                 {clientes.map((c) => <option key={c.id} value={c.id}>{c.nombre_cliente}</option>)}
               </select>
-            </div>
-            <div className="field">
-              <label>Comercial asociado</label>
-              <select className="input" value={detalles.comercialId} onChange={(e) => setDetalles({ ...detalles, comercialId: e.target.value })}>
-                <option value="">-- Selecciona --</option>
-                {comercialesOT.length > 0 && (
-                  <optgroup label="OT">
-                    {comercialesOT.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                  </optgroup>
-                )}
-                {comercialesIT.length > 0 && (
-                  <optgroup label="IT">
-                    {comercialesIT.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                  </optgroup>
-                )}
-                {comercialesMixto.length > 0 && (
-                  <optgroup label="IT/OT">
-                    {comercialesMixto.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                  </optgroup>
-                )}
-              </select>
-            </div>
-            <div className="field">
-              <label>Ubicación del proyecto</label>
+            </Field>
+            <Field label="Comercial asociado">
+              <ComercialSelect comerciales={comerciales} value={detalles.comercialId} onChange={(e) => setDetalles({ ...detalles, comercialId: e.target.value })} />
+            </Field>
+            <Field label="Ubicación del proyecto">
               <input className="input" value={detalles.ubicacionProyecto} onChange={(e) => setDetalles({ ...detalles, ubicacionProyecto: e.target.value })} />
-            </div>
-            <div className="field">
-              <label>ID de la oportunidad <span className="muted">(opcional)</span></label>
+            </Field>
+            <Field label={<>ID de la oportunidad <span className="muted">(opcional)</span></>}>
               <input className="input" value={detalles.idOportunidad} onChange={(e) => setDetalles({ ...detalles, idOportunidad: e.target.value })} placeholder="Ej. OP-5309" />
-            </div>
+            </Field>
             <div className="row">
               <Button size="sm" onClick={guardarDetalles} disabled={guardandoDetalles}>{guardandoDetalles ? 'Guardando...' : 'Guardar'}</Button>
               <Button size="sm" variant="outline" onClick={() => setEditandoDetalles(false)} disabled={guardandoDetalles}>Cancelar</Button>
@@ -324,16 +285,18 @@ export default function BomResumen() {
           included={!!cotizacion?.resultado}
           status={cotizacion?.resultado
             ? (cotizacion.requiere_aprobacion
-              ? (ESTADO_ESPEC_LABEL[cotizacion.estado] || cotizacion.estado)
+              ? (ESTADOS_LABEL[cotizacion.estado] || cotizacion.estado)
               : (cotizacion.modo === 'epsp' ? `${Number(cotizacion.resultado.total_dias_epsp).toFixed(2)} días EPSP` : `$${money(cotizacion.resultado.total_cop)} COP`))
             : 'No incluido'}
+          badgeVariant={cotizacion?.requiere_aprobacion ? ESTADOS_BADGE[cotizacion.estado] : undefined}
           resumen={resumenImplementacion}
         />
         <ComponentCard
           icon={IconShield} title="Servicios Netmask" to={`/boms/${id}/servicios`}
           description="SLA, cobertura y alcance del servicio gestionado."
           included={!!especificacion}
-          status={especificacion ? especificacion.estado : 'No incluido'}
+          status={especificacion ? (ESTADOS_LABEL[especificacion.estado] || especificacion.estado) : 'No incluido'}
+          badgeVariant={especificacion ? ESTADOS_BADGE[especificacion.estado] : undefined}
           resumen={resumenServicios}
         />
       </div>

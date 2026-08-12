@@ -6,6 +6,7 @@ import Card from '../components/Card.jsx';
 import Button from '../components/Button.jsx';
 import Badge from '../components/Badge.jsx';
 import { IconTrash, IconPlus, IconChevronRight } from '../components/icons.jsx';
+import Field from '../components/Field.jsx';
 
 function actividadVacia() {
   return { texto: '', horas: 1, modo: 'en_sitio' };
@@ -32,8 +33,7 @@ function FormularioActividades({ form, setForm, gruposDeLaMarca, guardar, cancel
   return (
     <Card style={{ marginBottom: 20 }}>
       <div className="form-grid" style={{ marginBottom: 14 }}>
-        <div className="field">
-          <label>Grupo</label>
+        <Field label="Grupo">
           <input
             className="input" required list="grupos-existentes" value={form.grupoNombre}
             onChange={(e) => setForm({ ...form, grupoNombre: e.target.value })}
@@ -42,11 +42,10 @@ function FormularioActividades({ form, setForm, gruposDeLaMarca, guardar, cancel
           <datalist id="grupos-existentes">
             {gruposDeLaMarca.map((g) => <option key={g} value={g} />)}
           </datalist>
-        </div>
-        <div className="field">
-          <label>Nombre de la tecnología</label>
+        </Field>
+        <Field label="Nombre de la tecnología">
           <input className="input" required value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} placeholder="Ej. Firewall Fortigate" />
-        </div>
+        </Field>
       </div>
 
       <h4 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: '.04em', color: 'var(--nm-text-muted)', marginBottom: 10 }}>
@@ -58,21 +57,18 @@ function FormularioActividades({ form, setForm, gruposDeLaMarca, guardar, cancel
       <div className="stack" style={{ marginBottom: 12 }}>
         {form.actividades.map((a, i) => (
           <div key={i} className="row" style={{ flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <div className="field" style={{ flex: 1, minWidth: 260, marginBottom: 0 }}>
-              <label>Descripción</label>
+            <Field label="Descripción" style={{ flex: 1, minWidth: 260, marginBottom: 0 }}>
               <input className="input" value={a.texto} onChange={(e) => actualizarActividad(i, 'texto', e.target.value)} placeholder="Descripción de la actividad" />
-            </div>
-            <div className="field" style={{ width: 90, marginBottom: 0 }}>
-              <label>Horas</label>
+            </Field>
+            <Field label="Horas" style={{ width: 90, marginBottom: 0 }}>
               <input className="input" type="number" min="0" step="0.25" value={a.horas} onChange={(e) => actualizarActividad(i, 'horas', Number(e.target.value))} />
-            </div>
-            <div className="field" style={{ width: 130, marginBottom: 0 }}>
-              <label>Modalidad</label>
+            </Field>
+            <Field label="Modalidad" style={{ width: 130, marginBottom: 0 }}>
               <select className="input" value={a.modo} onChange={(e) => actualizarActividad(i, 'modo', e.target.value)}>
                 <option value="en_sitio">En sitio</option>
                 <option value="remota">Remota</option>
               </select>
-            </div>
+            </Field>
             {form.actividades.length > 1 && (
               <Button variant="ghost" size="sm" onClick={() => quitarActividad(i)} style={{ color: 'var(--nm-danger)' }}><IconTrash width={14} height={14} /></Button>
             )}

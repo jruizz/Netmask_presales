@@ -1,15 +1,11 @@
 import { Router } from 'express';
 import * as documentosService from '../documentos/documentos.service.js';
-import * as bomsService from './boms.service.js';
+import { assertBomAccess } from './bomAccess.js';
 import { authMiddleware } from '../../middlewares/authMiddleware.js';
 import { requirePermiso } from '../../middlewares/roleGuard.js';
 
 export const bomDocumentosRouter = Router({ mergeParams: true });
 bomDocumentosRouter.use(authMiddleware);
-
-async function assertBomAccess(req) {
-  await bomsService.getBom(req.params.bomId, req.user);
-}
 
 bomDocumentosRouter.get('/', requirePermiso('ver'), async (req, res, next) => {
   try {

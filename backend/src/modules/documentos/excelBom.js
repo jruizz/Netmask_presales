@@ -2,6 +2,7 @@ import ExcelJS from 'exceljs';
 import {
   estiloEncabezado, estiloTotal, conBorde, bordePorFila,
   escribirEncabezadoProyecto, escribirViaticosPorSede, escribirDetalleCotizacion,
+  NUMFMT_DECIMAL,
 } from './excelCotizacion.js';
 
 // Agrupa subtotales de hardware por moneda -- nunca se suma COP con USD como si
@@ -43,10 +44,10 @@ export async function generarExcelBom({ bom, cliente, hardwareItems, cotizacion,
       row.getCell(3).value = it.descripcion || '—';
       row.getCell(4).value = Number(it.cantidad);
       row.getCell(5).value = Number(it.precio_unitario_snapshot);
-      row.getCell(5).numFmt = '#,##0.00';
+      row.getCell(5).numFmt = NUMFMT_DECIMAL;
       row.getCell(6).value = it.moneda || 'COP';
       row.getCell(7).value = Number(it.subtotal);
-      row.getCell(7).numFmt = '#,##0.00';
+      row.getCell(7).numFmt = NUMFMT_DECIMAL;
       bordePorFila(row, 1, 7);
       r++;
     });
@@ -56,7 +57,7 @@ export async function generarExcelBom({ bom, cliente, hardwareItems, cotizacion,
       const row = hw.getRow(r);
       row.getCell(2).value = `TOTAL ${moneda}`;
       row.getCell(7).value = total;
-      row.getCell(7).numFmt = '#,##0.00';
+      row.getCell(7).numFmt = NUMFMT_DECIMAL;
       bordePorFila(row, 1, 7);
       for (let c = 1; c <= 7; c++) estiloTotal(row.getCell(c));
       r++;

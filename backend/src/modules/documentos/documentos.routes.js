@@ -15,7 +15,7 @@ documentosRouter.get('/', requirePermiso('ver'), async (req, res, next) => {
   }
 });
 
-documentosRouter.get('/:id/descargar', async (req, res, next) => {
+documentosRouter.get('/:id/descargar', requirePermiso('descargar'), async (req, res, next) => {
   try {
     const documento = await documentosService.obtenerDocumentoParaDescarga(req.params.id);
     await bomsService.getBom(documento.bom_id, req.user);

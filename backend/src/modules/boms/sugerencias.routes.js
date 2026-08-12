@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { query } from '../../db/pool.js';
-import * as bomsService from './boms.service.js';
+import { assertBomAccess } from './bomAccess.js';
 import { authMiddleware } from '../../middlewares/authMiddleware.js';
 import { requirePermiso } from '../../middlewares/roleGuard.js';
 
@@ -12,7 +12,7 @@ sugerenciasRouter.use(authMiddleware);
 // catalogo_hardware.tecnologia_impl_sugerida_id.
 sugerenciasRouter.get('/', requirePermiso('ver'), async (req, res, next) => {
   try {
-    await bomsService.getBom(req.params.bomId, req.user);
+    await assertBomAccess(req);
     const { rows } = await query(
       `SELECT ch.tecnologia_impl_sugerida_id AS tecnologia_id, t.nombre AS tecnologia_nombre,
               SUM(bhi.cantidad) AS factor_equipos_sugerido
